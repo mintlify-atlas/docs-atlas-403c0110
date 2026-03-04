@@ -1,0 +1,98 @@
+{
+  "projectType": "ai-ml",
+  "projectName": "Modelo de la Computación - Simulaciones ABM",
+  "projectDescription": "Agent-Based Modeling simulations for student movement and traffic flow analysis",
+  "theme": "palm",
+  "primaryColor": "#4fc3f7",
+  "lightColor": "#81d4fa",
+  "darkColor": "#0288d1",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "concepts/agent-based-modeling",
+              "concepts/simulation-architecture"
+            ]
+          },
+          {
+            "group": "Simulations",
+            "pages": [
+              "simulations/student-movement",
+              "simulations/traffic-flow"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/running-simulations",
+              "guides/customizing-parameters",
+              "guides/visualization"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Student Movement API",
+            "pages": [
+              "api/student-simulation/estudiante",
+              "api/student-simulation/campus-universitario",
+              "api/student-simulation/visualizador"
+            ]
+          },
+          {
+            "group": "Traffic Flow API",
+            "pages": [
+              "api/traffic-simulation/auto",
+              "api/traffic-simulation/semaforo",
+              "api/traffic-simulation/ciudad",
+              "api/traffic-simulation/visualizador"
+            ]
+          },
+          {
+            "group": "Entry Points",
+            "pages": [
+              "api/ejecutar-simulacion"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Agent-based modeling of student movement across campus locations",
+    "Traffic intersection simulation with synchronized traffic lights",
+    "Real-time animated visualizations using matplotlib",
+    "Collision detection and avoidance in traffic flow",
+    "Dynamic decision-making based on space availability",
+    "Statistical tracking and historical data analysis"
+  ],
+  "publicApiSurface": [
+    "ejecutar_simulacion(num_estudiantes, pasos) - Student simulation entry point",
+    "ejecutar_simulacion(ancho_ciudad, alto_ciudad, pasos) - Traffic simulation entry point",
+    "Estudiante - Agent class representing individual students",
+    "CampusUniversitario - Environment class for campus simulation",
+    "VisualizadorSimulacion - Visualization engine for student movement",
+    "Auto - Agent class representing vehicles",
+    "Semaforo - Traffic light controller with state cycles",
+    "Ciudad - Environment class for traffic intersection",
+    "Visualizador - Visualization engine for traffic flow",
+    "UbicacionCampus - Enum for campus locations",
+    "EstadoSemaforo - Enum for traffic light states",
+    "SentidoVia - Enum for vehicle direction"
+  ]
+}
