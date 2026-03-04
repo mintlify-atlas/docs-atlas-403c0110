@@ -1,0 +1,218 @@
+---
+title: Installation
+description: Set up your Python environment and install the required dependencies for running ABM simulations
+---
+
+## Prerequisites
+
+Before starting, ensure you have the following installed on your system:
+
+<CardGroup cols={2}>
+  <Card title="Python 3.10+" icon="python">
+    Download from [python.org](https://www.python.org/downloads/)
+  </Card>
+  <Card title="Git" icon="git">
+    For cloning the repository (optional if downloading zip)
+  </Card>
+</CardGroup>
+
+<Note>
+  These simulations are designed to work on **Windows**, **macOS**, and **Linux**. The instructions below use PowerShell syntax for Windows, but equivalent commands work on other platforms.
+</Note>
+
+## Installation Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    Navigate to your preferred directory and clone the project:
+    
+    ```powershell
+    cd "C:\Users\YourName\Projects"
+    git clone <repository-url>
+    cd <repository-folder>
+    ```
+    
+    <Tip>
+      If you downloaded the project as a ZIP file, extract it and navigate to the extracted folder instead.
+    </Tip>
+  </Step>
+
+  <Step title="Create Virtual Environment">
+    Create an isolated Python environment to avoid dependency conflicts:
+    
+    <CodeGroup>
+      ```powershell Windows (PowerShell)
+      python -m venv .venv
+      .venv\Scripts\Activate.ps1
+      ```
+      
+      ```bash macOS/Linux
+      python3 -m venv .venv
+      source .venv/bin/activate
+      ```
+    </CodeGroup>
+    
+    After activation, your terminal prompt should show `(.venv)` at the beginning.
+    
+    <Warning>
+      On Windows, if you encounter a script execution error, run:
+      ```powershell
+      Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+      ```
+    </Warning>
+  </Step>
+
+  <Step title="Upgrade pip">
+    Ensure you have the latest version of pip:
+    
+    ```powershell
+    python -m pip install --upgrade pip
+    ```
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install the required packages from `requirements.txt`:
+    
+    ```powershell
+    python -m pip install -r requirements.txt
+    ```
+    
+    This will install:
+    - **numpy**: Efficient numerical operations and array handling
+    - **matplotlib**: Visualization and animation framework
+    
+    <Accordion title="View requirements.txt contents">
+      ```txt
+      numpy
+      matplotlib
+      ```
+      
+      These are the only two dependencies needed for both simulations.
+    </Accordion>
+  </Step>
+
+  <Step title="Verify Installation">
+    Test that the environment is correctly configured by checking package versions:
+    
+    ```powershell
+    python -c "import numpy; import matplotlib; print(f'NumPy: {numpy.__version__}'); print(f'Matplotlib: {matplotlib.__version__}')"
+    ```
+    
+    Expected output (versions may vary):
+    ```
+    NumPy: 1.26.0
+    Matplotlib: 3.8.0
+    ```
+  </Step>
+</Steps>
+
+## Project Structure
+
+After installation, your project directory should look like this:
+
+```
+📦 Repository Root
+├── .vscode/                          # VS Code debug configurations
+├── .venv/                            # Virtual environment (created by you)
+├── requirements.txt                  # Python dependencies
+├── run_sim.py                        # Launcher — Student simulation
+├── run_traffic.py                    # Launcher — Traffic simulation (root level)
+├── README.md                         # Project documentation
+└── PARCIAL 1/
+    └── simulation/
+        ├── movimiento estudiantes/   # Student movement source code
+        │   └── simulacion_movimiento_estudiantes_universidad.py
+        └── trafico en una ciudad/   # Traffic simulation source code
+            ├── simulacion_trafico_ciudad.py
+            └── run_traffic.py       # Alternative launcher location
+```
+
+<Note>
+  The `.venv/` directory will be created after Step 2 and contains your isolated Python environment.
+</Note>
+
+## Visual Studio Code Setup (Optional)
+
+If you're using VS Code, the project includes pre-configured debug launch configurations:
+
+<Steps>
+  <Step title="Select Python Interpreter">
+    1. Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (macOS)
+    2. Type "Python: Select Interpreter"
+    3. Choose the interpreter inside `.venv` (e.g., `./.venv/Scripts/python.exe`)
+  </Step>
+
+  <Step title="Use Debug Configurations">
+    Press `F5` and select one of these configurations:
+    - **Run Simulation**: Launches the student movement simulation
+    - **Run Traffic Simulation**: Launches the traffic intersection simulation
+    
+    These configurations automatically use the correct Python paths and working directories.
+  </Step>
+</Steps>
+
+## Testing Your Installation
+
+Run a quick test to confirm everything works:
+
+<CodeGroup>
+  ```powershell Student Simulation Test
+  python run_sim.py --num 10 --pasos 20
+  ```
+  
+  ```powershell Traffic Simulation Test
+  python run_traffic.py --ancho 20 --alto 20 --pasos 50
+  ```
+</CodeGroup>
+
+If a matplotlib window appears showing animated agents, your installation is successful!
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Module not found errors">
+    Ensure your virtual environment is activated:
+    ```powershell
+    # You should see (.venv) in your prompt
+    # If not, re-activate:
+    .venv\Scripts\Activate.ps1  # Windows
+    source .venv/bin/activate   # macOS/Linux
+    ```
+  </Accordion>
+  
+  <Accordion title="Matplotlib doesn't display window">
+    If running in a remote environment (like SSH), matplotlib might not have a display backend. Try:
+    ```python
+    import matplotlib
+    matplotlib.use('TkAgg')  # or 'Qt5Agg'
+    ```
+    
+    Or use Google Colab, which handles this automatically.
+  </Accordion>
+  
+  <Accordion title="Permission denied on Windows PowerShell">
+    Run PowerShell as Administrator and execute:
+    ```powershell
+    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+    ```
+  </Accordion>
+  
+  <Accordion title="Python command not found">
+    Ensure Python is added to your system PATH during installation. Alternatively, use the full path:
+    ```powershell
+    C:\Python310\python.exe -m venv .venv
+    ```
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  If you're working in **Google Colab**, you can skip all installation steps. Simply upload the simulation files and run them directly - Colab already includes numpy and matplotlib.
+</Warning>
+
+## Next Steps
+
+Now that your environment is set up, learn how to run and customize the simulations:
+
+<Card title="Quick Start Guide" icon="rocket" href="/quickstart">
+  Run both simulations with different parameters and understand the command-line options
+</Card>

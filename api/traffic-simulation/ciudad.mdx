@@ -1,0 +1,382 @@
+---
+title: "Ciudad"
+description: "Environment coordinator class managing the complete traffic simulation"
+icon: "city"
+---
+
+## Overview
+
+The `Ciudad` class is the central environment coordinator that contains and manages all simulation elements. It creates traffic lights, generates vehicles, updates all agents, and tracks statistics.
+
+**Core responsibilities:**
+1. Create and maintain the 4 intersection traffic lights
+2. Periodically generate vehicles at the 4 entry points
+3. Update all agents in each simulation step
+4. Remove vehicles that exit the grid
+5. Collect and track performance metrics
+
+**MBA analogy:** The Ciudad is like a company; vehicles are autonomous employees following policies (traffic lights) within a context provided by the environment.
+
+**Class location:** `simulacion_trafico_ciudad.py`, line 432
+
+---
+
+## Constructor
+
+```python
+Ciudad()
+```
+
+Initializes the simulation environment with traffic lights, empty vehicle list, and statistics counters.
+
+**No parameters required** - all configuration uses global constants.
+
+### Initialization Steps
+
+1. Creates empty vehicle list (`lista_autos`)
+2. Instantiates 4 traffic lights at intersection entry points
+3. Sets up generation counters with `intervalo_generacion = 22` steps
+4. Initializes statistics tracking (total created, completed)
+5. Creates metric history lists for visualization
+
+### Example
+
+```python
+from simulacion_trafico_ciudad import Ciudad
+
+# Create the simulation environment
+ciudad = Ciudad()
+
+print(f"Traffic lights: {len(ciudad.lista_semaforos)}")
+print(f"Initial vehicles: {len(ciudad.lista_autos)}")
+print(f"Cycle duration: {ciudad.lista_semaforos[0].duracion_ciclo} steps")
+```
+
+---
+
+## Instance Attributes
+
+### Core Collections
+
+<ResponseField name="lista_autos" type="list">
+  List of all active `Auto` objects currently in the simulation
+</ResponseField>
+
+<ResponseField name="lista_semaforos" type="list">
+  List of exactly 4 `Semaforo` objects controlling the intersection. Created during initialization:
+  
+  - **Traffic Light 1:** Controls `DERECHA` (rightward), positioned at `(CENTRO_X - ANCHO_CALLE, CENTRO_Y + 0.25)`, phase 0 (starts GREEN)
+  - **Traffic Light 2:** Controls `IZQUIERDA` (leftward), positioned at `(CENTRO_X + ANCHO_CALLE, CENTRO_Y - 0.25)`, phase 0 (starts GREEN)
+  - **Traffic Light 3:** Controls `ARRIBA` (upward), positioned at `(CENTRO_X - 0.25, CENTRO_Y - ANCHO_CALLE)`, phase 50 (starts RED)
+  - **Traffic Light 4:** Controls `ABAJO` (downward), positioned at `(CENTRO_X + 0.25, CENTRO_Y + ANCHO_CALLE)`, phase 50 (starts RED)
+</ResponseField>
+
+### Generation Counters
+
+<ResponseField name="pasos_desde_ultimo_auto_horizontal" type="int">
+  Steps elapsed since last horizontal vehicle was generated (X-axis traffic)
+</ResponseField>
+
+<ResponseField name="pasos_desde_ultimo_auto_vertical" type="int">
+  Steps elapsed since last vertical vehicle was generated (Y-axis traffic)
+</ResponseField>
+
+<ResponseField name="intervalo_generacion" type="int">
+  Base interval between vehicle spawns = **22 steps**. Increased from lower values to prevent vehicles spawning too close together
+</ResponseField>
+
+### Statistics
+
+<ResponseField name="total_autos_creados" type="int">
+  Historical count of all vehicles ever created since simulation start
+</ResponseField>
+
+<ResponseField name="total_autos_completados" type="int">
+  Count of vehicles that successfully crossed and exited the grid
+</ResponseField>
+
+<ResponseField name="paso_actual" type="int">
+  Current simulation step counter (equivalent to animation frame number)
+</ResponseField>
+
+### Metric History
+
+<ResponseField name="historial_autos_activos" type="list">
+  Time series of active vehicle counts per step. Used for density graphs.
+</ResponseField>
+
+<ResponseField name="historial_autos_detenidos" type="list">
+  Time series of stopped vehicle counts per step. Used for congestion analysis.
+</ResponseField>
+
+---
+
+## Methods
+
+### actualizar()
+
+```python
+def actualizar() -> None
+```
+
+Advances the simulation by one time step. **This is the main simulation loop.**
+
+**Execution order (critical for consistency):**
+
+1. **Update all traffic lights** - advance state cycles
+2. **Update all vehicles** - each decides and moves
+3. **Remove exited vehicles** - clean up off-grid vehicles
+4. **Generate new vehicles** - spawn at entry points if interval elapsed
+5. **Record metrics** - log counts for visualization
+
+**Side effects:**
+- Increments `paso_actual`
+- Modifies `lista_autos` (adds/removes vehicles)
+- Updates `total_autos_completados` counter
+- Appends to history lists
+
+#### Example
+
+```python
+ciudad = Ciudad()
+
+# Run simulation for 100 steps
+for step in range(100):
+    ciudad.actualizar()
+    print(f"Step {ciudad.paso_actual}: {len(ciudad.lista_autos)} active vehicles")
+```
+
+---
+
+## Vehicle Generation Methods
+
+### _generar_auto_horizontal()
+
+```python
+def _generar_auto_horizontal() -> None
+```
+
+**Private method** that creates a vehicle at one of the two horizontal entry points (left or right edge), **only if the entry zone is clear.**
+
+**Entry positioning:**
+- `SentidoVia.DERECHA`: Enters from left at `(0.0, CENTRO_Y + 0.25)`
+- `SentidoVia.IZQUIERDA`: Enters from right at `(ANCHO_CUADRICULA, CENTRO_Y - 0.25)`
+
+**Safety check:** Calls `_zona_entrada_libre()` before spawning to prevent vehicles appearing too close to existing traffic.
+
+**Side effects:**
+- May append new `Auto` to `lista_autos`
+- Increments `total_autos_creados` if spawned
+- Does nothing if entry zone occupied
+
+---
+
+### _generar_auto_vertical()
+
+```python
+def _generar_auto_vertical() -> None
+```
+
+**Private method** that creates a vehicle at one of the two vertical entry points (top or bottom edge), **only if the entry zone is clear.**
+
+**Entry positioning:**
+- `SentidoVia.ARRIBA`: Enters from bottom at `(CENTRO_X - 0.25, 0.0)`
+- `SentidoVia.ABAJO`: Enters from top at `(CENTRO_X + 0.25, ALTO_CUADRICULA)`
+
+**Safety check:** Calls `_zona_entrada_libre()` before spawning.
+
+**Side effects:**
+- May append new `Auto` to `lista_autos`
+- Increments `total_autos_creados` if spawned
+
+---
+
+### _zona_entrada_libre()
+
+```python
+def _zona_entrada_libre(pos_x: float, pos_y: float) -> bool
+```
+
+**Private method** that verifies an entry zone is sufficiently clear before spawning a new vehicle.
+
+**Rule:** No existing vehicle may be within `(DISTANCIA_SEGURIDAD + 1.0)` cells of the proposed entry point. The extra 1.0 margin ensures the new vehicle doesn't spawn "glued" to the last vehicle that entered.
+
+<ParamField path="pos_x" type="float" required>
+  Proposed X coordinate for the new vehicle
+</ParamField>
+
+<ParamField path="pos_y" type="float" required>
+  Proposed Y coordinate for the new vehicle
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  `True` if entry is clear and vehicle can be generated, `False` if a vehicle is too close
+</ResponseField>
+
+---
+
+## Traffic Light Configuration
+
+The constructor creates a synchronized 4-light system:
+
+```python
+# Phase calculation for perpendicular synchronization
+fase_inicial_rojo = PASOS_VERDE + PASOS_AMARILLO  # = 50
+
+lista_semaforos = [
+    # Light 1: Controls DERECHA (→) - starts GREEN (phase 0)
+    Semaforo(
+        pos_x=CENTRO_X - ANCHO_CALLE,
+        pos_y=CENTRO_Y + MITAD_CALLE * 0.5,
+        sentidos_controlados=[SentidoVia.DERECHA],
+        fase_inicial=0
+    ),
+    
+    # Light 2: Controls IZQUIERDA (←) - starts GREEN (phase 0)
+    Semaforo(
+        pos_x=CENTRO_X + ANCHO_CALLE,
+        pos_y=CENTRO_Y - MITAD_CALLE * 0.5,
+        sentidos_controlados=[SentidoVia.IZQUIERDA],
+        fase_inicial=0
+    ),
+    
+    # Light 3: Controls ARRIBA (↑) - starts RED (phase 50)
+    Semaforo(
+        pos_x=CENTRO_X - MITAD_CALLE * 0.5,
+        pos_y=CENTRO_Y - ANCHO_CALLE,
+        sentidos_controlados=[SentidoVia.ARRIBA],
+        fase_inicial=fase_inicial_rojo
+    ),
+    
+    # Light 4: Controls ABAJO (↓) - starts RED (phase 50)
+    Semaforo(
+        pos_x=CENTRO_X + MITAD_CALLE * 0.5,
+        pos_y=CENTRO_Y + ANCHO_CALLE,
+        sentidos_controlados=[SentidoVia.ABAJO],
+        fase_inicial=fase_inicial_rojo
+    ),
+]
+```
+
+**Synchronization strategy:** Horizontal lights start GREEN while vertical lights start RED, preventing perpendicular flows from having simultaneous green lights.
+
+---
+
+## Generation Timing
+
+The `actualizar()` method implements staggered vehicle generation:
+
+```python
+# Horizontal vehicle generation
+if pasos_desde_ultimo_auto_horizontal >= intervalo_generacion:  # Every 22 steps
+    _generar_auto_horizontal()
+    pasos_desde_ultimo_auto_horizontal = 0  # Reset counter
+
+# Vertical vehicle generation (with 6-step offset for realism)
+if pasos_desde_ultimo_auto_vertical >= intervalo_generacion + 6:  # Every 28 steps
+    _generar_auto_vertical()
+    pasos_desde_ultimo_auto_vertical = 0  # Reset counter
+```
+
+**Design rationale:**
+- Base interval of 22 steps provides adequate spacing between vehicles
+- 6-step offset between axes adds traffic pattern variety
+- Entry zone checking prevents spawning collisions
+
+---
+
+## Metric Collection
+
+At the end of each `actualizar()` call, statistics are recorded:
+
+```python
+total_activos = len(lista_autos)
+total_parados = sum(1 for a in lista_autos if a.esta_detenido)
+
+historial_autos_activos.append(total_activos)
+historial_autos_detenidos.append(total_parados)
+```
+
+These time series enable the visualization of:
+- **Traffic flow fluidity:** Percentage of vehicles in motion
+- **Congestion density:** Total and stopped vehicle counts over time
+- **Throughput efficiency:** Ratio of completed to created vehicles
+
+---
+
+## Grid Constants
+
+The intersection geometry uses these global constants:
+
+```python
+ANCHO_CUADRICULA = 20    # Grid width in cells
+ALTO_CUADRICULA = 20     # Grid height in cells
+
+CENTRO_X = 10            # Horizontal center (ANCHO_CUADRICULA // 2)
+CENTRO_Y = 10            # Vertical center (ALTO_CUADRICULA // 2)
+
+ANCHO_CALLE = 3          # Street width including both lanes
+MITAD_CALLE = 1          # Half-width for lane offset (ANCHO_CALLE // 2)
+```
+
+---
+
+## Update Algorithm Detail
+
+The `actualizar()` method implements this precise sequence:
+
+```python
+def actualizar(self):
+    self.paso_actual += 1
+    
+    # 1. Update all traffic lights
+    for semaforo in self.lista_semaforos:
+        semaforo.actualizar()
+    
+    # 2. Update all vehicles (autonomous decision-making)
+    for auto in self.lista_autos:
+        auto.actualizar(self.lista_semaforos, self.lista_autos)
+    
+    # 3. Remove off-grid vehicles
+    cantidad_antes = len(self.lista_autos)
+    self.lista_autos = [a for a in self.lista_autos if not a.fuera_de_pantalla]
+    cantidad_despues = len(self.lista_autos)
+    self.total_autos_completados += (cantidad_antes - cantidad_despues)
+    
+    # 4. Generate new vehicles
+    self.pasos_desde_ultimo_auto_horizontal += 1
+    self.pasos_desde_ultimo_auto_vertical += 1
+    
+    if self.pasos_desde_ultimo_auto_horizontal >= self.intervalo_generacion:
+        self._generar_auto_horizontal()
+        self.pasos_desde_ultimo_auto_horizontal = 0
+    
+    if self.pasos_desde_ultimo_auto_vertical >= self.intervalo_generacion + 6:
+        self._generar_auto_vertical()
+        self.pasos_desde_ultimo_auto_vertical = 0
+    
+    # 5. Record metrics
+    total_activos = len(self.lista_autos)
+    total_parados = sum(1 for a in self.lista_autos if a.esta_detenido)
+    self.historial_autos_activos.append(total_activos)
+    self.historial_autos_detenidos.append(total_parados)
+```
+
+**Why this order matters:**
+- Traffic lights update first so vehicles have current state information
+- Vehicles update with complete context (all lights and vehicles)
+- Removal happens after movement to capture exit conditions
+- Generation happens last to avoid new vehicles updating twice
+
+---
+
+## Design Pattern: Environment Coordinator
+
+The `Ciudad` class exemplifies the **Environment** pattern in agent-based modeling:
+
+- **Container:** Holds all agents and infrastructure
+- **Coordinator:** Orchestrates update sequence without controlling individual decisions
+- **Observer:** Tracks emergent statistics from autonomous behaviors
+- **Generator:** Creates agents at entry points following stochastic rules
+
+**Key principle:** The Ciudad provides context but doesn't dictate individual vehicle behavior - complex traffic patterns emerge from simple local rules.

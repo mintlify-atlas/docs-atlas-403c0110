@@ -1,0 +1,416 @@
+---
+title: 'Customizing Parameters'
+description: 'Configure simulation behavior by modifying parameters and constants'
+icon: 'sliders'
+---
+
+## Overview
+
+This guide explains all configurable parameters in the agent-based simulations. Parameters can be modified via command-line arguments or by editing constants in the source code.
+
+## Command-Line Parameters
+
+These parameters can be passed when running simulations from the terminal.
+
+### Student Movement Simulation
+
+<ParamField path="--num" type="integer" default="50">
+  **Number of students**
+  
+  Controls the total number of student agents in the simulation.
+  
+  ```bash
+  python run_sim.py --num 100
+  ```
+  
+  <Note>
+    Recommended range: 20-200. Higher values may slow down visualization.
+  </Note>
+</ParamField>
+
+<ParamField path="--pasos" type="integer" default="100">
+  **Simulation steps**
+  
+  Number of time steps (frames) to run the simulation.
+  
+  ```bash
+  python run_sim.py --pasos 200
+  ```
+  
+  Each step represents one decision cycle where agents evaluate their environment and potentially move.
+</ParamField>
+
+### Traffic Simulation
+
+<ParamField path="--ancho" type="integer" default="20">
+  **Grid width**
+  
+  Width of the city grid in cells.
+  
+  ```bash
+  python run_traffic.py --ancho 30
+  ```
+  
+  <Note>
+    Must be large enough to accommodate the intersection (minimum 10).
+  </Note>
+</ParamField>
+
+<ParamField path="--alto" type="integer" default="20">
+  **Grid height**
+  
+  Height of the city grid in cells.
+  
+  ```bash
+  python run_traffic.py --alto 30
+  ```
+</ParamField>
+
+<ParamField path="--pasos" type="integer" default="200">
+  **Simulation steps**
+  
+  Number of animation frames to run.
+  
+  ```bash
+  python run_traffic.py --pasos 500
+  ```
+  
+  Longer simulations allow traffic patterns to stabilize and reach equilibrium.
+</ParamField>
+
+## Traffic Simulation Constants
+
+These constants are defined in `simulacion_trafico_ciudad.py` (lines 46-78). Modify them directly in the source code for fine-grained control.
+
+### Grid and Intersection Layout
+
+```python Lines 46-54
+ANCHO_CUADRICULA  = 20   # Grid width
+ALTO_CUADRICULA   = 20   # Grid height
+
+CENTRO_X = ANCHO_CUADRICULA // 2   # Intersection center X
+CENTRO_Y = ALTO_CUADRICULA  // 2   # Intersection center Y
+
+ANCHO_CALLE  = 3   # Street width in cells (both directions)
+MITAD_CALLE  = ANCHO_CALLE // 2
+```
+
+<ParamField path="ANCHO_CUADRICULA" type="integer" default="20">
+  Number of cells in the horizontal axis. Defines the total simulation canvas width.
+</ParamField>
+
+<ParamField path="ALTO_CUADRICULA" type="integer" default="20">
+  Number of cells in the vertical axis. Defines the total simulation canvas height.
+</ParamField>
+
+<ParamField path="ANCHO_CALLE" type="integer" default="3">
+  Width of each street including both directions. Affects intersection size.
+  
+  <Warning>
+    Values less than 2 may cause collision detection issues.
+  </Warning>
+</ParamField>
+
+### Traffic Light Timing
+
+```python Lines 57-59
+PASOS_VERDE    = 40   # Green light duration
+PASOS_AMARILLO = 10   # Yellow light duration
+PASOS_ROJO     = 50   # Red light duration
+```
+
+<ParamField path="PASOS_VERDE" type="integer" default="40">
+  Duration of green light in animation frames.
+  
+  Higher values allow more cars to pass per cycle. Lower values create more stop-and-go traffic.
+  
+  ```python Example: Longer green phase
+  PASOS_VERDE = 60
+  ```
+</ParamField>
+
+<ParamField path="PASOS_AMARILLO" type="integer" default="10">
+  Duration of yellow (transition) light in frames.
+  
+  Acts as warning before red. Cars treat yellow as stop signal in this simulation.
+</ParamField>
+
+<ParamField path="PASOS_ROJO" type="integer" default="50">
+  Duration of red light in frames.
+  
+  Total cycle length = `PASOS_VERDE + PASOS_AMARILLO + PASOS_ROJO` = 100 frames
+</ParamField>
+
+### Vehicle Behavior
+
+```python Lines 62-68
+VELOCIDAD_AUTO = 0.4   # Cells per frame
+
+DISTANCIA_SEGURIDAD = 1.8   # Minimum gap between cars
+
+DISTANCIA_DETECCION_SEMAFORO = 3.0   # How far ahead cars see traffic light
+
+TOLERANCIA_LATERAL = 0.65   # Lane detection tolerance
+```
+
+<ParamField path="VELOCIDAD_AUTO" type="float" default="0.4">
+  Speed at which cars advance per frame (in grid cells).
+  
+  ```python Example: Faster traffic
+  VELOCIDAD_AUTO = 0.6
+  ```
+  
+  <Note>
+    Higher speeds require adjusting `DISTANCIA_SEGURIDAD` to prevent collisions.
+  </Note>
+</ParamField>
+
+<ParamField path="DISTANCIA_SEGURIDAD" type="float" default="1.8">
+  Minimum distance maintained between consecutive cars (in cells).
+  
+  Must be greater than car length (1.0) plus buffer. Value of 1.8 ensures 0.8 cells of free space.
+  
+  ```python Example: More spacing
+  DISTANCIA_SEGURIDAD = 2.5
+  ```
+</ParamField>
+
+<ParamField path="DISTANCIA_DETECCION_SEMAFORO" type="float" default="3.0">
+  Distance at which cars detect and react to traffic lights ahead.
+  
+  Larger values give cars more time to brake smoothly before the intersection.
+  
+  ```python Example: Earlier braking
+  DISTANCIA_DETECCION_SEMAFORO = 4.5
+  ```
+</ParamField>
+
+<ParamField path="TOLERANCIA_LATERAL" type="float" default="0.65">
+  Perpendicular distance tolerance for considering cars in the same lane.
+  
+  Must be less than lane width to avoid false positives with opposing traffic.
+</ParamField>
+
+### Car Generation Rate
+
+```python Lines 517
+intervalo_generacion = 22   # Frames between new car spawns
+```
+
+<ParamField path="intervalo_generacion" type="integer" default="22" location="Ciudad.__init__">
+  Number of frames between spawning new cars at grid edges.
+  
+  Located in the `Ciudad` class constructor (line 517).
+  
+  ```python Example: More traffic density
+  self.intervalo_generacion = 15   # Spawn cars more frequently
+  ```
+  
+  ```python Example: Less congestion
+  self.intervalo_generacion = 35   # Spawn cars less often
+  ```
+  
+  <Warning>
+    Very low values (< 10) can cause entrance zones to become congested.
+  </Warning>
+</ParamField>
+
+## Student Simulation Constants
+
+These parameters are defined in `simulacion_movimiento_estudiantes_universidad.py`.
+
+### Campus Capacities
+
+```python Lines 169-173
+self.capacidades = {
+    UbicacionCampus.AULA: 30,
+    UbicacionCampus.BIBLIOTECA: 25,
+    UbicacionCampus.CAFETERIA: 20
+}
+```
+
+<ParamField path="capacidades" type="dict" location="CampusUniversitario.__init__">
+  Maximum occupancy for each campus location.
+  
+  Students prefer locations with lower occupancy rates. Modify in class constructor (lines 169-173).
+  
+  ```python Example: Larger spaces
+  self.capacidades = {
+      UbicacionCampus.AULA: 50,
+      UbicacionCampus.BIBLIOTECA: 40,
+      UbicacionCampus.CAFETERIA: 30
+  }
+  ```
+</ParamField>
+
+### Student Behavior
+
+```python Lines 74, 100
+self.tiempo_minimo_permanencia = random.randint(3, 8)
+
+if nivel_ocupacion_actual < 0.7 and random.random() < 0.7:
+```
+
+<ParamField path="tiempo_minimo_permanencia" type="range" default="3-8">
+  Random duration (in steps) students stay at a location before considering moving.
+  
+  Defined in `Estudiante.__init__` (line 74).
+  
+  ```python Example: Longer stays
+  self.tiempo_minimo_permanencia = random.randint(5, 15)
+  ```
+</ParamField>
+
+<ParamField path="nivel_ocupacion_actual" type="float" default="0.7">
+  Occupancy threshold below which students tend to stay put.
+  
+  Located in `decidir_siguiente_ubicacion` method (line 100).
+  
+  - Value of 0.7 = 70% full
+  - Students have 70% chance to stay if location is < 70% occupied
+  
+  ```python Example: More sensitive to crowding
+  if nivel_ocupacion_actual < 0.5 and random.random() < 0.8:
+  ```
+</ParamField>
+
+### Initial Distribution
+
+```python Lines 218-222
+ubicaciones_iniciales = (
+    [UbicacionCampus.AULA] * int(num_estudiantes * 0.6) +
+    [UbicacionCampus.BIBLIOTECA] * int(num_estudiantes * 0.2) +
+    [UbicacionCampus.CAFETERIA] * int(num_estudiantes * 0.2)
+)
+```
+
+<ParamField path="ubicaciones_iniciales" type="distribution" location="CampusUniversitario._crear_estudiantes">
+  Initial placement ratios for students.
+  
+  Default: 60% classroom, 20% library, 20% cafeteria
+  
+  ```python Example: Start everyone in library
+  ubicaciones_iniciales = (
+      [UbicacionCampus.BIBLIOTECA] * num_estudiantes
+  )
+  ```
+</ParamField>
+
+### Visualization Zones
+
+```python Lines 177-181
+self.zonas = {
+    UbicacionCampus.AULA: {'x': 25, 'y': 75, 'ancho': 40, 'alto': 40},
+    UbicacionCampus.BIBLIOTECA: {'x': 75, 'y': 75, 'ancho': 40, 'alto': 40},
+    UbicacionCampus.CAFETERIA: {'x': 50, 'y': 25, 'ancho': 40, 'alto': 40}
+}
+```
+
+Defines visual layout on the 100x100 canvas. Modify for different spatial arrangements.
+
+## Animation Settings
+
+### Frame Rate
+
+Control animation speed by modifying the `interval` parameter:
+
+<CodeGroup>
+  ```python Student Simulation (line 519)
+  anim = animation.FuncAnimation(
+      self.fig,
+      self._actualizar_animacion,
+      frames=self.pasos_simulacion,
+      interval=500,  # Milliseconds per frame
+      repeat=False,
+      blit=False
+  )
+  ```
+
+  ```python Traffic Simulation
+  # Located in ejecutar_simulacion function
+  ani = animacion_mod.FuncAnimation(
+      fig, 
+      actualizar_frame, 
+      frames=pasos,
+      interval=50,  # Default 50ms (20 FPS)
+      blit=False
+  )
+  ```
+</CodeGroup>
+
+<ParamField path="interval" type="integer" default="500 (student) / 50 (traffic)">
+  Milliseconds between animation frames.
+  
+  - Lower = faster animation
+  - Higher = slower, easier to observe
+  
+  ```python Example: Real-time traffic
+  interval=30  # ~33 FPS
+  ```
+</ParamField>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Test Incrementally" icon="vial">
+    Change one parameter at a time to understand its isolated effect
+  </Card>
+  <Card title="Document Changes" icon="file-pen">
+    Comment your modifications with reasoning for future reference
+  </Card>
+  <Card title="Validate Ranges" icon="triangle-exclamation">
+    Extreme values can break physics (e.g., speed > safety distance)
+  </Card>
+  <Card title="Backup Original" icon="copy">
+    Keep a copy of default values before experimenting
+  </Card>
+</CardGroup>
+
+## Common Customization Scenarios
+
+<AccordionGroup>
+  <Accordion title="Create rush hour traffic">
+    ```python
+    # In simulacion_trafico_ciudad.py
+    self.intervalo_generacion = 12  # Spawn cars twice as fast
+    PASOS_VERDE = 30                # Shorter green lights
+    PASOS_ROJO = 60                 # Longer waits
+    ```
+  </Accordion>
+
+  <Accordion title="Simulate efficient campus">
+    ```python
+    # In simulacion_movimiento_estudiantes_universidad.py
+    self.capacidades = {
+        UbicacionCampus.AULA: 50,        # Larger spaces
+        UbicacionCampus.BIBLIOTECA: 50,
+        UbicacionCampus.CAFETERIA: 40
+    }
+    
+    # Make students move less frequently
+    self.tiempo_minimo_permanencia = random.randint(10, 20)
+    ```
+  </Accordion>
+
+  <Accordion title="High-speed traffic simulation">
+    ```python
+    VELOCIDAD_AUTO = 0.8                  # Double speed
+    DISTANCIA_SEGURIDAD = 3.0             # Increase safety buffer
+    DISTANCIA_DETECCION_SEMAFORO = 5.0    # Earlier detection
+    ```
+  </Accordion>
+
+  <Accordion title="Detailed long-term study">
+    ```bash
+    # Run from command line with extended duration
+    python run_sim.py --num 100 --pasos 500
+    python run_traffic.py --ancho 30 --alto 30 --pasos 1000
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<Card title="Understanding Visualization" icon="chart-mixed" href="/guides/visualization">
+  Learn how to interpret the metrics and graphs displayed during simulation
+</Card>

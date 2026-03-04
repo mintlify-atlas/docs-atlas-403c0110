@@ -1,0 +1,629 @@
+---
+title: 'VisualizadorSimulacion'
+description: 'Visualization class for animating and displaying the student movement simulation'
+icon: 'chart-line'
+---
+
+## Overview
+
+The `VisualizadorSimulacion` class handles all graphical aspects of the simulation, including rendering the campus layout, animating student movements, and displaying real-time statistics.
+
+**Key Features:**
+- Dual-panel visualization (spatial view + time-series graphs)
+- Real-time animation of student movement
+- Occupancy tracking with capacity indicators
+- Color-coded zones and student markers
+- Statistical overlay with current occupancy percentages
+
+## Class Definition
+
+```python
+class VisualizadorSimulacion:
+    """
+    Handles all graphical aspects of the simulation.
+    
+    Responsibilities:
+    - Create the window and graphs
+    - Draw the campus and students
+    - Animate movement
+    - Display real-time statistics
+    """
+```
+
+## Constructor
+
+<ParamField path="__init__" type="method">
+  Prepares the visualization environment and configures matplotlib figure.
+  
+  ```python
+  def __init__(self, campus, pasos_simulacion=100)
+  ```
+  
+  <ParamField path="campus" type="CampusUniversitario" required>
+    The campus environment object to visualize
+  </ParamField>
+  
+  <ParamField path="pasos_simulacion" type="int" default="100">
+    Number of simulation time steps to run
+  </ParamField>
+  
+  **Setup Operations:**
+  1. Stores campus reference
+  2. Sets total simulation steps
+  3. Initializes step counter
+  4. Creates dual-panel matplotlib figure (16×7 inches)
+  5. Configures left panel for spatial campus view
+  6. Configures right panel for time-series statistics
+</ParamField>
+
+**Source:** `simulacion_movimiento_estudiantes_universidad.py:344-362`
+
+### Figure Configuration
+
+```python
+# Creates figure with two side-by-side subplots
+self.fig, (self.ax_campus, self.ax_estadisticas) = plt.subplots(1, 2, figsize=(16, 7))
+self.fig.suptitle('Simulación de Movimiento de Estudiantes en el Campus', 
+                  fontsize=16, fontweight='bold')
+```
+
+**Panel Layout:**
+- **Left (`ax_campus`)**: 2D spatial view showing student positions
+- **Right (`ax_estadisticas`)**: Line graphs showing occupancy over time
+
+### Example
+
+```python
+import matplotlib.pyplot as plt
+
+# Create campus
+campus = CampusUniversitario(num_estudiantes=50)
+
+# Create visualizer for 100 simulation steps
+visualizador = VisualizadorSimulacion(campus, pasos_simulacion=100)
+
+# Start animation
+visualizador.ejecutar()
+```
+
+## Attributes
+
+<ResponseField name="campus" type="CampusUniversitario">
+  Reference to the campus environment being visualized.
+  
+  **Source:** `simulacion_movimiento_estudiantes_universidad.py:352`
+</ResponseField>
+
+<ResponseField name="pasos_simulacion" type="int">
+  Total number of time steps the simulation will run.
+  
+  **Source:** `simulacion_movimiento_estudiantes_universidad.py:353`
+</ResponseField>
+
+<ResponseField name="paso_actual" type="int">
+  Current simulation step counter. Starts at 0 and increments with each frame.
+  
+  **Source:** `simulacion_movimiento_estudiantes_universidad.py:354`
+</ResponseField>
+
+<ResponseField name="fig" type="matplotlib.figure.Figure">
+  The main matplotlib figure object containing both subplots.
+  
+  **Source:** `simulacion_movimiento_estudiantes_universidad.py:360`
+</ResponseField>
+
+<ResponseField name="ax_campus" type="matplotlib.axes.Axes">
+  Left subplot axes for spatial campus visualization.
+  
+  **Displays:**
+  - Colored zone rectangles (classroom, library, cafeteria)
+  - Student positions as scatter points
+  - Zone labels
+  - Grid overlay
+  
+  **Source:** `simulacion_movimiento_estudiantes_universidad.py:360`
+</ResponseField>
+
+<ResponseField name="ax_estadisticas" type="matplotlib.axes.Axes">
+  Right subplot axes for time-series statistics visualization.
+  
+  **Displays:**
+  - Line graphs of occupancy per location
+  - Capacity limit horizontal lines
+  - Text box with current statistics
+  - Legend identifying each location
+  
+  **Source:** `simulacion_movimiento_estudiantes_universidad.py:360`
+</ResponseField>
+
+## Public Methods
+
+### ejecutar
+
+<ParamField path="ejecutar" type="method">
+  Starts the animated simulation visualization.
+  
+  ```python
+  def ejecutar(self)
+  ```
+  
+  **Animation Configuration:**
+  - **Frame function**: `_actualizar_animacion`
+  - **Frame count**: `pasos_simulacion`
+  - **Interval**: 500ms (2 frames per second)
+  - **Repeat**: False (stops after completion)
+  - **Blit**: False (full redraw each frame)
+  
+  <ResponseField name="return" type="matplotlib.animation.FuncAnimation">
+    Animation object (can be saved to video or displayed)
+  </ResponseField>
+</ParamField>
+
+**Source:** `simulacion_movimiento_estudiantes_universidad.py:510-531`
+
+#### Implementation
+
+```python
+def ejecutar(self):
+    anim = animation.FuncAnimation(
+        self.fig,
+        self._actualizar_animacion,
+        frames=self.pasos_simulacion,
+        interval=500,  # Milliseconds between frames
+        repeat=False,
+        blit=False
+    )
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return anim
+```
+
+#### Example with Video Export
+
+```python
+# Create and run simulation
+campus = CampusUniversitario(num_estudiantes=50)
+visualizador = VisualizadorSimulacion(campus, pasos_simulacion=100)
+anim = visualizador.ejecutar()
+
+# Save to video (requires ffmpeg)
+# anim.save('simulation.mp4', writer='ffmpeg', fps=2)
+```
+
+#### Customizing Animation Speed
+
+```python
+# Faster animation (250ms = 4 fps)
+visualizador = VisualizadorSimulacion(campus, pasos_simulacion=100)
+anim = animation.FuncAnimation(
+    visualizador.fig,
+    visualizador._actualizar_animacion,
+    frames=100,
+    interval=250,  # Faster
+    repeat=False
+)
+plt.show()
+```
+
+## Private Methods
+
+### _dibujar_zonas_campus
+
+<ParamField path="_dibujar_zonas_campus" type="method">
+  Internal method that draws the colored zone rectangles and labels on the campus view.
+  
+  ```python
+  def _dibujar_zonas_campus(self)
+  ```
+  
+  **Rendering Steps:**
+  1. Iterates through each campus zone
+  2. Creates Rectangle patch with zone dimensions
+  3. Applies color from `campus.colores_zonas`
+  4. Sets 30% transparency (`alpha=0.3`)
+  5. Adds centered text label with zone name
+  6. Text has white background for readability
+</ParamField>
+
+**Source:** `simulacion_movimiento_estudiantes_universidad.py:364-392`
+
+#### Implementation Details
+
+```python
+for ubicacion, zona in self.campus.zonas.items():
+    # Create rectangle patch
+    rectangulo = plt.Rectangle(
+        (zona['x'] - zona['ancho']/2, zona['y'] - zona['alto']/2),
+        zona['ancho'],
+        zona['alto'],
+        facecolor=self.campus.colores_zonas[ubicacion],
+        edgecolor='black',
+        linewidth=2,
+        alpha=0.3
+    )
+    self.ax_campus.add_patch(rectangulo)
+    
+    # Add label
+    self.ax_campus.text(
+        zona['x'], zona['y'],
+        ubicacion.value,
+        ha='center', va='center',
+        fontsize=12, fontweight='bold',
+        bbox=dict(boxstyle='round', facecolor='white', alpha=0.8)
+    )
+```
+
+#### Visual Result
+
+- **AULA**: Light pink rectangle at (25, 75)
+- **BIBLIOTECA**: Light blue rectangle at (75, 75)
+- **CAFETERIA**: Light green rectangle at (50, 25)
+- Each with centered label and black border
+
+### _actualizar_animacion
+
+<ParamField path="_actualizar_animacion" type="method">
+  Core animation function called for each frame. Executes simulation step and updates all visualizations.
+  
+  ```python
+  def _actualizar_animacion(self, frame)
+  ```
+  
+  <ParamField path="frame" type="int">
+    Frame number provided by matplotlib.animation (0, 1, 2, ...)
+  </ParamField>
+  
+  **Frame Update Process:**
+  
+  1. **Execute Simulation Logic**
+     ```python
+     self.campus.actualizar_simulacion()
+     self.paso_actual += 1
+     ```
+  
+  2. **Clear Previous Graphics**
+     ```python
+     self.ax_campus.clear()
+     self.ax_estadisticas.clear()
+     ```
+  
+  3. **Redraw Campus View**
+     - Draw zone rectangles
+     - Plot student positions as scatter points
+     - Color by current location (red/blue/green)
+     - Configure axes and grid
+  
+  4. **Update Statistics View**
+     - Plot occupancy lines for each location
+     - Draw capacity limit lines
+     - Add current statistics text box
+     - Configure legend and labels
+</ParamField>
+
+**Source:** `simulacion_movimiento_estudiantes_universidad.py:394-508`
+
+#### Student Rendering
+
+```python
+# Draw each student as colored dot
+for estudiante in self.campus.estudiantes:
+    # Determine color based on location
+    if estudiante.ubicacion_actual == UbicacionCampus.AULA:
+        color = 'red'
+    elif estudiante.ubicacion_actual == UbicacionCampus.BIBLIOTECA:
+        color = 'blue'
+    else:
+        color = 'green'
+    
+    self.ax_campus.scatter(
+        estudiante.posicion_x,
+        estudiante.posicion_y,
+        c=color,
+        s=50,          # Marker size
+        alpha=0.6,     # Transparency
+        edgecolors='black',
+        linewidth=0.5
+    )
+```
+
+**Color Coding:**
+- Red dots = Students in classroom (AULA)
+- Blue dots = Students in library (BIBLIOTECA)
+- Green dots = Students in cafeteria (CAFETERIA)
+
+#### Campus View Configuration
+
+```python
+self.ax_campus.set_xlim(0, 100)
+self.ax_campus.set_ylim(0, 100)
+self.ax_campus.set_aspect('equal')
+self.ax_campus.set_title(f'Vista del Campus - Paso {self.paso_actual}/{self.pasos_simulacion}',
+                          fontsize=14, fontweight='bold')
+self.ax_campus.set_xlabel('Coordenada X')
+self.ax_campus.set_ylabel('Coordenada Y')
+self.ax_campus.grid(True, alpha=0.3)
+```
+
+#### Time-Series Graph
+
+```python
+if self.paso_actual > 1:  # Need at least 2 points
+    pasos = range(1, self.paso_actual + 1)
+    
+    for ubicacion in UbicacionCampus:
+        datos = self.campus.historial_ocupacion[ubicacion][:self.paso_actual]
+        
+        # Determine line color
+        if ubicacion == UbicacionCampus.AULA:
+            color = 'red'
+        elif ubicacion == UbicacionCampus.BIBLIOTECA:
+            color = 'blue'
+        else:
+            color = 'green'
+        
+        # Plot occupancy line
+        self.ax_estadisticas.plot(
+            pasos,
+            datos,
+            label=ubicacion.value,
+            color=color,
+            linewidth=2,
+            marker='o',
+            markersize=3
+        )
+        
+        # Draw capacity limit line
+        capacidad = self.campus.capacidades[ubicacion]
+        self.ax_estadisticas.axhline(
+            y=capacidad,
+            color=color,
+            linestyle='--',
+            alpha=0.5,
+            linewidth=1
+        )
+```
+
+**Graph Elements:**
+- Solid lines: Current occupancy over time
+- Dashed lines: Maximum capacity limits
+- Markers: Individual data points per step
+- Legend: Identifies each location
+
+#### Statistics Text Box
+
+```python
+stats = self.campus.obtener_estadisticas()
+texto_stats = "Ocupación Actual:\n"
+for ubicacion, datos in stats.items():
+    texto_stats += f"{ubicacion}: {datos['cantidad']}/{datos['capacidad']} ({datos['porcentaje']:.1f}%)\n"
+
+self.ax_estadisticas.text(
+    0.02, 0.98,
+    texto_stats,
+    transform=self.ax_estadisticas.transAxes,
+    fontsize=10,
+    verticalalignment='top',
+    bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8)
+)
+```
+
+**Text Box Display:**
+```
+Ocupación Actual:
+Aula: 28/30 (93.3%)
+Biblioteca: 15/25 (60.0%)
+Cafetería: 7/20 (35.0%)
+```
+
+#### Statistics View Configuration
+
+```python
+self.ax_estadisticas.set_title('Ocupación de Espacios en el Tiempo',
+                               fontsize=14, fontweight='bold')
+self.ax_estadisticas.set_xlabel('Paso de Tiempo')
+self.ax_estadisticas.set_ylabel('Número de Estudiantes')
+self.ax_estadisticas.legend(loc='upper right')
+self.ax_estadisticas.grid(True, alpha=0.3)
+self.ax_estadisticas.set_xlim(0, self.pasos_simulacion)
+
+# Y-axis: 120% of max capacity for headroom
+max_capacidad = max(self.campus.capacidades.values())
+self.ax_estadisticas.set_ylim(0, max_capacidad * 1.2)
+```
+
+## Complete Usage Example
+
+```python
+import matplotlib.pyplot as plt
+from matplotlib import animation
+
+# Setup
+plt.style.use('seaborn-v0_8-darkgrid')  # Nice visual style
+
+# Create campus with 60 students
+campus = CampusUniversitario(num_estudiantes=60)
+
+print("Initial state:")
+stats = campus.obtener_estadisticas()
+for ubicacion, datos in stats.items():
+    print(f"{ubicacion}: {datos['cantidad']} students")
+
+# Create visualizer for 150 steps
+visualizador = VisualizadorSimulacion(campus, pasos_simulacion=150)
+
+# Run animation
+print("\nStarting animation...")
+anim = visualizador.ejecutar()
+
+# Animation displays in window
+# Close window when complete to continue
+
+print("\nFinal state:")
+stats = campus.obtener_estadisticas()
+for ubicacion, datos in stats.items():
+    print(f"{ubicacion}: {datos['cantidad']} students ({datos['porcentaje']:.1f}%)")
+```
+
+## Advanced Usage
+
+### Saving Animation to File
+
+```python
+# Requires ffmpeg or imagemagick installed
+campus = CampusUniversitario(num_estudiantes=50)
+visualizador = VisualizadorSimulacion(campus, pasos_simulacion=100)
+
+# Create animation object
+anim = animation.FuncAnimation(
+    visualizador.fig,
+    visualizador._actualizar_animacion,
+    frames=100,
+    interval=500,
+    repeat=False
+)
+
+# Save as MP4 (requires ffmpeg)
+anim.save('student_simulation.mp4', writer='ffmpeg', fps=2, dpi=150)
+
+# Or save as GIF (requires imagemagick)
+anim.save('student_simulation.gif', writer='pillow', fps=2)
+
+print("Animation saved!")
+```
+
+### Custom Styling
+
+```python
+import matplotlib.pyplot as plt
+
+# Apply custom style
+plt.style.use('dark_background')  # Dark theme
+
+campus = CampusUniversitario(num_estudiantes=50)
+visualizador = VisualizadorSimulacion(campus, pasos_simulacion=100)
+
+# Customize before running
+visualizador.fig.patch.set_facecolor('#1e1e1e')
+visualizador.ax_campus.set_facecolor('#2d2d2d')
+visualizador.ax_estadisticas.set_facecolor('#2d2d2d')
+
+# Run with custom colors
+anim = visualizador.ejecutar()
+```
+
+### Interactive Controls
+
+```python
+from matplotlib.widgets import Button
+
+campus = CampusUniversitario(num_estudiantes=50)
+visualizador = VisualizadorSimulacion(campus, pasos_simulacion=100)
+
+# Add pause/resume functionality
+class AnimationController:
+    def __init__(self, anim):
+        self.anim = anim
+        self.paused = False
+    
+    def toggle_pause(self, event):
+        if self.paused:
+            self.anim.resume()
+        else:
+            self.anim.pause()
+        self.paused = not self.paused
+
+anim = animation.FuncAnimation(
+    visualizador.fig,
+    visualizador._actualizar_animacion,
+    frames=100,
+    interval=500,
+    repeat=False
+)
+
+controller = AnimationController(anim)
+
+# Add button
+ax_button = plt.axes([0.45, 0.01, 0.1, 0.04])
+button = Button(ax_button, 'Pause/Resume')
+button.on_clicked(controller.toggle_pause)
+
+plt.show()
+```
+
+## Design Rationale
+
+### Why Two Panels?
+
+**Spatial View (Left):**
+- Shows WHERE students are
+- Visualizes movement patterns
+- Identifies clustering
+- Intuitive understanding of space usage
+
+**Time-Series View (Right):**
+- Shows HOW MANY students over time
+- Reveals temporal dynamics
+- Displays convergence to equilibrium
+- Quantitative validation
+
+### Why 500ms Interval?
+
+- 2 frames per second = comfortable viewing speed
+- Fast enough to show dynamics
+- Slow enough to observe individual steps
+- Matches human perception of change
+
+### Why Full Redraw (blit=False)?
+
+- Simpler implementation
+- Handles dynamic text/labels
+- More reliable across platforms
+- Performance adequate for this simulation scale
+
+### Why Transparency (alpha=0.3 zones, 0.6 students)?
+
+- Zones visible but not overwhelming
+- Students stand out clearly
+- Overlapping students still visible
+- Professional aesthetic
+
+## Troubleshooting
+
+### Animation Not Displaying
+
+```python
+# Ensure matplotlib backend supports animation
+import matplotlib
+matplotlib.use('TkAgg')  # Or 'Qt5Agg'
+
+import matplotlib.pyplot as plt
+# ... rest of code
+```
+
+### Slow Performance
+
+```python
+# Reduce student count or steps
+campus = CampusUniversitario(num_estudiantes=30)  # Fewer students
+visualizador = VisualizadorSimulacion(campus, pasos_simulacion=50)  # Fewer steps
+```
+
+### Save Video Errors
+
+```bash
+# Install ffmpeg
+# Ubuntu/Debian:
+sudo apt-get install ffmpeg
+
+# macOS:
+brew install ffmpeg
+
+# Windows: Download from ffmpeg.org
+```
+
+## Related Classes
+
+- [CampusUniversitario](/api/student-simulation/campus-universitario) - Environment being visualized
+- [Estudiante](/api/student-simulation/estudiante) - Agents being rendered

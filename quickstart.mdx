@@ -1,80 +1,312 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Run your first agent-based simulation in under 2 minutes
 ---
 
-## Get started in three steps
+## Run Your First Simulation
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
+Choose one of the two simulations to start exploring agent-based modeling:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Student Movement" icon="users" color="#ea5545">
+    Watch students navigate between classroom, library, and cafeteria
+  </Card>
+  <Card title="Urban Traffic" icon="car" color="#27aeef">
+    Observe vehicles flowing through a 4-way intersection
+  </Card>
 </CardGroup>
 
+## Student Movement Simulation
+
+<Steps>
+  <Step title="Basic Execution">
+    Run the simulation with default parameters (50 students, 100 time steps):
+    
+    ```powershell
+    python run_sim.py
+    ```
+    
+    This launches an animated window showing:
+    - **Left panel**: Spatial view of the campus with colored zones
+    - **Right panel**: Real-time occupancy graph tracking student distribution
+  </Step>
+
+  <Step title="Customize Parameters">
+    Adjust the number of students and simulation duration:
+    
+    ```powershell
+    python run_sim.py --num 50 --pasos 100
+    ```
+    
+    <ParamField path="--num" type="integer" default="50">
+      Number of student agents to simulate
+    </ParamField>
+    
+    <ParamField path="--pasos" type="integer" default="100">
+      Number of time steps (animation frames) to run
+    </ParamField>
+  </Step>
+
+  <Step title="Observe the Behavior">
+    Watch how emergent patterns develop:
+    
+    <Check>Students initially cluster in the classroom (60% start there)</Check>
+    <Check>Overcrowding triggers migration to less occupied spaces</Check>
+    <Check>Occupancy levels gradually balance across all three locations</Check>
+    <Check>Students remain in comfortable locations (< 70% capacity) with 70% probability</Check>
+    
+    The console displays detailed statistics:
+    ```
+    ======================================================================
+    INICIANDO SIMULACIÓN DE MOVIMIENTO DE ESTUDIANTES
+    ======================================================================
+    
+    Parámetros de simulación:
+      - Número de estudiantes: 50
+      - Pasos de simulación: 100
+    
+    Creando campus universitario...
+    Campus creado exitosamente!
+    
+    Capacidades de cada espacio:
+      - Aula: 30 estudiantes
+      - Biblioteca: 25 estudiantes
+      - Cafetería: 20 estudiantes
+    
+    Distribución inicial:
+      - Aula: 30 estudiantes (100.0%)
+      - Biblioteca: 10 estudiantes (40.0%)
+      - Cafetería: 10 estudiantes (50.0%)
+    ```
+  </Step>
+</Steps>
+
+### Example Scenarios
+
+Experiment with different configurations to observe various patterns:
+
+<CodeGroup>
+  ```powershell Overcrowded Campus
+  python run_sim.py --num 80 --pasos 150
+  ```
+  
+  ```powershell Quick Test
+  python run_sim.py --num 20 --pasos 50
+  ```
+  
+  ```powershell Extended Analysis
+  python run_sim.py --num 50 --pasos 300
+  ```
+</CodeGroup>
+
+<Tip>
+  Try running with 80 students to see how the system handles capacity constraints - some locations will consistently operate at 100% occupancy, forcing dynamic rebalancing.
+</Tip>
+
+## Traffic Intersection Simulation
+
+<Steps>
+  <Step title="Basic Execution">
+    Run the traffic simulation with default grid size (20x20) and 200 time steps:
+    
+    ```powershell
+    python run_traffic.py
+    ```
+    
+    This opens a visualization showing:
+    - **Left panel**: 4-way intersection with animated vehicles and traffic lights
+    - **Top right**: Traffic flow efficiency percentage
+    - **Bottom right**: Active vs. stopped vehicle counts
+  </Step>
+
+  <Step title="Customize Parameters">
+    Modify the grid dimensions and simulation length:
+    
+    ```powershell
+    python run_traffic.py --ancho 20 --alto 20 --pasos 200
+    ```
+    
+    <ParamField path="--ancho" type="integer" default="20">
+      Grid width in cells (affects visualization scale, not intersection logic)
+    </ParamField>
+    
+    <ParamField path="--alto" type="integer" default="20">
+      Grid height in cells (affects visualization scale, not intersection logic)
+    </ParamField>
+    
+    <ParamField path="--pasos" type="integer" default="200">
+      Number of simulation steps (frames) to execute
+    </ParamField>
+  </Step>
+
+  <Step title="Understand Traffic Behavior">
+    Observe the autonomous decision-making hierarchy:
+    
+    <Steps>
+      <Step title="Priority 1: Collision Avoidance">
+        Vehicles detect cars ahead and maintain a safety distance of 1.8 cells
+        
+        ```python
+        hay_auto_adelante = self.detectar_auto_al_frente(lista_autos)
+        ```
+      </Step>
+      
+      <Step title="Priority 2: Traffic Light Compliance">
+        Cars stop for yellow and red lights within detection range (3.0 cells)
+        
+        ```python
+        semaforo_frontal = self.detectar_semaforo_al_frente(lista_semaforos)
+        semaforo_dice_parar = not semaforo_frontal.puede_pasar(self.sentido)
+        ```
+      </Step>
+      
+      <Step title="Priority 3: Movement">
+        If path is clear, vehicles advance at 0.4 cells per time step
+        
+        ```python
+        if not (hay_auto_adelante or semaforo_dice_parar):
+            delta_x, delta_y = self._calcular_delta()
+            self.pos_x += delta_x
+            self.pos_y += delta_y
+        ```
+      </Step>
+    </Steps>
+  </Step>
+
+  <Step title="Monitor Traffic Light Cycles">
+    Traffic lights follow synchronized phases:
+    
+    | Phase | Duration | Horizontal Lights | Vertical Lights |
+    |-------|----------|-------------------|------------------|
+    | 1     | 40 steps | 🟢 GREEN         | 🔴 RED          |
+    | 2     | 10 steps | 🟡 YELLOW        | 🔴 RED          |
+    | 3     | 50 steps | 🔴 RED           | 🟢 GREEN        |
+    | 4     | 10 steps | 🔴 RED           | 🟡 YELLOW       |
+    
+    Total cycle: 100 steps (50 for each direction)
+  </Step>
+</Steps>
+
+### Example Scenarios
+
+<CodeGroup>
+  ```powershell Rush Hour Simulation
+  python run_traffic.py --pasos 500
+  ```
+  
+  ```powershell Quick Intersection Test
+  python run_traffic.py --pasos 100
+  ```
+  
+  ```powershell Extended Analysis
+  python run_traffic.py --ancho 25 --alto 25 --pasos 400
+  ```
+</CodeGroup>
+
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  The `--ancho` and `--alto` parameters primarily affect the visual scale. The intersection logic is centered in the grid and operates independently of grid size.
 </Note>
+
+## Visual Indicators
+
+Understand what you're seeing in the simulations:
+
+### Student Simulation Colors
+
+<CardGroup cols={3}>
+  <Card title="Red Dots" icon="circle" color="#ff0000">
+    Students currently in the **Aula** (Classroom)
+  </Card>
+  <Card title="Blue Dots" icon="circle" color="#0000ff">
+    Students currently in the **Biblioteca** (Library)
+  </Card>
+  <Card title="Green Dots" icon="circle" color="#00ff00">
+    Students currently in the **Cafetería** (Cafeteria)
+  </Card>
+</CardGroup>
+
+### Traffic Simulation Colors
+
+<CardGroup cols={2}>
+  <Card title="Blue Cars" icon="car" color="#1565C0">
+    Vehicles traveling **horizontally** (East ↔ West)
+  </Card>
+  <Card title="Red Cars" icon="car" color="#C62828">
+    Vehicles traveling **vertically** (North ↔ South)
+  </Card>
+</CardGroup>
+
+**Vehicle States:**
+- Normal outline: Vehicle is moving
+- **White border**: Vehicle is stopped (waiting for traffic light or another car)
+
+## Common Observations
+
+<AccordionGroup>
+  <Accordion title="Why do students cluster in one location?">
+    If many students start in the same area and it's under 70% capacity, they'll likely stay (70% stay probability). Once capacity exceeds 70%, you'll see rapid migration to less crowded spaces.
+  </Accordion>
+  
+  <Accordion title="Why do cars appear to 'teleport' away?">
+    Vehicles that exit the grid boundaries (after crossing the intersection) are automatically removed with the `fuera_de_pantalla` flag. This prevents infinite accumulation and simulates continuous traffic flow.
+  </Accordion>
+  
+  <Accordion title="Why don't all cars stop at red lights?">
+    Only cars within **3.0 cells** of their corresponding traffic light detect it. Cars far from the intersection continue moving freely until they enter the detection zone.
+  </Accordion>
+  
+  <Accordion title="How is collision avoidance implemented?">
+    Each vehicle checks if another car's rear is within **1.8 cells** ahead in the same lane (using `TOLERANCIA_LATERAL = 0.65` to define "same lane"). If detected, the vehicle stops immediately.
+  </Accordion>
+</AccordionGroup>
+
+## Running in Google Colab
+
+Both simulations work seamlessly in Colab without modifications:
+
+<Steps>
+  <Step title="Upload Files">
+    Upload the entire `PARCIAL 1/simulation/` directory to your Colab session
+  </Step>
+  
+  <Step title="Navigate to Directory">
+    ```python
+    import os
+    os.chdir('/content/PARCIAL 1/simulation/movimiento estudiantes universidad')
+    ```
+  </Step>
+  
+  <Step title="Execute Directly">
+    ```python
+    # For student simulation
+    %run simulacion_movimiento_estudiantes_universidad.py
+    
+    # Or call the function with custom parameters
+    ejecutar_simulacion(num_estudiantes=60, pasos=150)
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  Colab's matplotlib backend may behave differently than local environments. If animations don't display, add this at the top of your notebook:
+  ```python
+  %matplotlib notebook
+  ```
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Customize Parameters" icon="code" href="/guides/customizing-parameters">
+    Learn how to adjust simulation parameters and agent behavior
+  </Card>
+  <Card title="Visualization Guide" icon="chart-line" href="/guides/visualization">
+    Understand the matplotlib animations and metrics graphs
+  </Card>
+  <Card title="Student Movement API" icon="graduation-cap" href="/api/student-simulation/estudiante">
+    Explore the Estudiante agent class documentation
+  </Card>
+  <Card title="Traffic Flow API" icon="car" href="/api/traffic-simulation/auto">
+    Explore the Auto vehicle agent class documentation
+  </Card>
+</CardGroup>

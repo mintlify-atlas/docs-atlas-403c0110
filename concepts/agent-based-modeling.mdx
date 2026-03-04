@@ -1,0 +1,341 @@
+---
+title: 'Agent-Based Modeling'
+description: 'Understanding how autonomous agents create emergent behavior in complex systems'
+icon: 'users'
+---
+
+## What is Agent-Based Modeling?
+
+Agent-Based Modeling (ABM) is a computational approach where **autonomous agents** interact within an environment according to simple rules, producing complex emergent behavior at the system level.
+
+<Info>
+**Key Principle**: Simple individual rules → Complex collective patterns
+
+Each agent makes decisions independently, but their interactions create system-wide phenomena that cannot be predicted from individual behavior alone.
+</Info>
+
+## Core Components
+
+Every agent-based simulation in this project follows a consistent pattern:
+
+<CardGroup cols={3}>
+  <Card title="Agents" icon="user">
+    Autonomous entities that perceive and act
+  </Card>
+  <Card title="Environment" icon="map">
+    The shared space where agents interact
+  </Card>
+  <Card title="Rules" icon="book-open">
+    Decision logic that governs agent behavior
+  </Card>
+</CardGroup>
+
+### Agents
+
+Agents are **independent decision-makers** with:
+
+- **State**: Current properties (position, direction, status)
+- **Perception**: Ability to sense the environment
+- **Autonomy**: Individual decision-making logic
+- **Action**: Capability to modify their state
+
+<Accordion title="Example: Traffic Simulation Agents">
+In `simulacion_trafico_ciudad.py`, the `Auto` class represents vehicle agents:
+
+```python
+class Auto:
+    def __init__(self, pos_x: float, pos_y: float, sentido: SentidoVia):
+        self.id_auto = Auto.contador_global_autos
+        self.pos_x = pos_x
+        self.pos_y = pos_y
+        self.sentido = sentido
+        self.auto_velocidad = VELOCIDAD_AUTO
+        self.esta_detenido = False
+```
+
+Each car maintains its own:
+- **Position** (`pos_x`, `pos_y`): Where it is in the grid
+- **Direction** (`sentido`): Which way it's traveling
+- **Velocity**: How fast it moves per step
+- **State**: Whether it's stopped or moving
+</Accordion>
+
+### Environment
+
+The environment provides:
+
+- **Spatial structure**: Grid, continuous space, or network
+- **Shared resources**: Traffic lights, building capacity
+- **Global state**: Information accessible to all agents
+- **Constraints**: Boundaries and collision detection
+
+<Accordion title="Example: Campus Environment">
+In `simulacion_movimiento_estudiantes_universidad.py`, the `CampusUniversitario` class manages:
+
+```python
+class CampusUniversitario:
+    def __init__(self, num_estudiantes=50):
+        self.capacidades = {
+            UbicacionCampus.AULA: 30,
+            UbicacionCampus.BIBLIOTECA: 25,
+            UbicacionCampus.CAFETERIA: 20
+        }
+        self.estudiantes = []
+        self.historial_ocupacion = {}
+```
+
+- **Capacity constraints**: Maximum occupancy per location
+- **Agent registry**: List of all students
+- **History tracking**: Occupancy over time
+</Accordion>
+
+## The Decision Loop
+
+Every agent follows a **perceive-decide-act** cycle each simulation step:
+
+```mermaid
+graph LR
+    A[Perceive Environment] --> B[Evaluate Options]
+    B --> C[Make Decision]
+    C --> D[Execute Action]
+    D --> E[Update State]
+    E --> A
+    style A fill:#1a1a2e,stroke:#4fc3f7,color:#fff
+    style B fill:#1a1a2e,stroke:#4fc3f7,color:#fff
+    style C fill:#1a1a2e,stroke:#66bb6a,color:#fff
+    style D fill:#1a1a2e,stroke:#66bb6a,color:#fff
+    style E fill:#1a1a2e,stroke:#4fc3f7,color:#fff
+```
+
+<Accordion title="Example: Car Decision Logic">
+From `Auto.actualizar()` in `simulacion_trafico_ciudad.py:389-426`:
+
+```python
+def actualizar(self, lista_semaforos: list, lista_autos: list):
+    # 1. PERCEIVE: Check for obstacles
+    hay_auto_adelante = self.detectar_auto_al_frente(lista_autos)
+    
+    # 2. PERCEIVE: Check traffic light
+    semaforo_frontal = self.detectar_semaforo_al_frente(lista_semaforos)
+    semaforo_dice_parar = False
+    if semaforo_frontal is not None:
+        semaforo_dice_parar = not semaforo_frontal.puede_pasar(self.sentido)
+    
+    # 3. DECIDE: Stop or go?
+    if hay_auto_adelante or semaforo_dice_parar:
+        self.esta_detenido = True
+        return
+    
+    # 4. ACT: Move forward
+    self.esta_detenido = False
+    delta_x, delta_y = self._calcular_delta()
+    self.pos_x += delta_x
+    self.pos_y += delta_y
+    
+    # 5. UPDATE: Check if out of bounds
+    if self.pos_x < -2 or self.pos_x > ANCHO_CUADRICULA + 2:
+        self.fuera_de_pantalla = True
+```
+
+**Decision hierarchy**:
+1. Collision avoidance (highest priority)
+2. Traffic light obedience
+3. Forward movement (default)
+</Accordion>
+
+## Emergent Behavior
+
+**Emergence** is when system-level patterns arise from agent interactions—patterns that aren't explicitly programmed.
+
+<Note>
+No single agent "knows" about traffic jams or crowd flow, yet these phenomena emerge naturally from individual behaviors.
+</Note>
+
+### Traffic Flow Patterns
+
+In the traffic simulation, emergent behaviors include:
+
+- **Queue formation**: Cars naturally line up behind red lights
+- **Wave propagation**: Stop-and-go waves when traffic resumes
+- **Capacity balancing**: Flow rate limited by intersection capacity
+
+<Accordion title="How queues emerge without explicit queue logic">
+The `Auto` class has NO queue data structure, yet queues form because:
+
+```python
+def detectar_auto_al_frente(self, lista_autos: list) -> bool:
+    for otro_auto in lista_autos:
+        if otro_auto.id_auto == self.id_auto:
+            continue
+        
+        # Calculate distance to other car
+        diferencia_eje = (otro_auto.pos_x - MITAD_LARGO_AUTO) - \
+                        (self.pos_x + MITAD_LARGO_AUTO)
+        
+        # If another car is too close, stop
+        if (-0.1 < diferencia_eje < DISTANCIA_SEGURIDAD and
+                diferencia_lateral < TOLERANCIA_LATERAL):
+            return True
+```
+
+1. Car A stops at red light
+2. Car B detects Car A ahead → stops
+3. Car C detects Car B ahead → stops
+4. **Queue emerges** from repeated local collision avoidance
+</Accordion>
+
+### Space Distribution
+
+In the campus simulation, students redistribute themselves:
+
+```python
+def decidir_siguiente_ubicacion(self, entorno):
+    nivel_ocupacion_actual = entorno.obtener_nivel_ocupacion(
+        self.ubicacion_actual
+    )
+    
+    # Stay if comfortable (<70% full)
+    if nivel_ocupacion_actual < 0.7 and random.random() < 0.7:
+        return self.ubicacion_actual
+    
+    # Find least crowded location
+    mejor_ubicacion = None
+    menor_ocupacion = 1.0
+    for ubicacion in UbicacionCampus:
+        ocupacion = entorno.obtener_nivel_ocupacion(ubicacion)
+        if ocupacion < menor_ocupacion:
+            menor_ocupacion = ocupacion
+            mejor_ubicacion = ubicacion
+    
+    return mejor_ubicacion
+```
+
+**Emergent equilibrium**: Over time, student distribution balances across locations without central coordination.
+
+## Agent Heterogeneity
+
+Agents can differ in:
+
+- **Parameters**: Speed, perception range, decision thresholds
+- **Behavior**: Different decision functions
+- **State**: Current condition affects future decisions
+
+<Accordion title="Example: Student patience varies">
+```python
+def __init__(self, ubicacion_inicial, posicion_x, posicion_y):
+    # Each student has different patience
+    self.tiempo_en_ubicacion = 0
+    self.tiempo_minimo_permanencia = random.randint(3, 8)
+```
+
+Some students move quickly (patience = 3), others stay longer (patience = 8).
+This creates **realistic flow patterns** rather than synchronized movement.
+</Accordion>
+
+## Stochasticity vs. Determinism
+
+<Tabs>
+  <Tab title="Stochastic Elements">
+    Random components introduce variability:
+    
+    ```python
+    # Random initial spawn direction
+    sentido = random.choice([SentidoVia.DERECHA, SentidoVia.IZQUIERDA])
+    
+    # Probabilistic decision-making
+    if nivel_ocupacion_actual < 0.7 and random.random() < 0.7:
+        return self.ubicacion_actual
+    ```
+    
+    **Why?** Real-world systems have inherent uncertainty.
+  </Tab>
+  
+  <Tab title="Deterministic Elements">
+    Fixed rules ensure consistency:
+    
+    ```python
+    # Fixed speed
+    self.auto_velocidad = VELOCIDAD_AUTO
+    
+    # Deterministic collision detection
+    if diferencia_eje < DISTANCIA_SEGURIDAD:
+        return True  # Always stop
+    ```
+    
+    **Why?** Core physics and constraints should be predictable.
+  </Tab>
+  
+  <Tab title="Reproducibility">
+    Random seed ensures identical runs:
+    
+    ```python
+    random.seed(42)
+    ```
+    
+    Same seed → same random sequence → reproducible experiments.
+  </Tab>
+</Tabs>
+
+## Time Stepping
+
+Simulations advance in discrete time steps:
+
+```python
+def actualizar(self):
+    self.paso_actual += 1
+    
+    # 1. Update all traffic lights
+    for semaforo in self.lista_semaforos:
+        semaforo.actualizar()
+    
+    # 2. Update all cars
+    for auto in self.lista_autos:
+        auto.actualizar(self.lista_semaforos, self.lista_autos)
+    
+    # 3. Remove off-screen cars
+    self.lista_autos = [a for a in self.lista_autos 
+                        if not a.fuera_de_pantalla]
+    
+    # 4. Spawn new cars
+    if self.pasos_desde_ultimo_auto_horizontal >= self.intervalo_generacion:
+        self._generar_auto_horizontal()
+```
+
+<Warning>
+**Order matters!** All agents perceive the world, THEN all agents act. This prevents unfair advantages based on update order.
+</Warning>
+
+## Observing the System
+
+ABM simulations track metrics at multiple levels:
+
+### Individual Level
+- Agent positions and states
+- Decision outcomes
+
+### Aggregate Level
+- Total agents in system
+- Distribution across locations
+- Flow rates
+
+```python
+# Individual tracking
+for auto in self.lista_autos:
+    if auto.esta_detenido:
+        total_parados += 1
+
+# System-level metrics
+self.historial_autos_activos.append(len(self.lista_autos))
+self.historial_autos_detenidos.append(total_parados)
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Simulation Architecture" icon="diagram-project" href="/concepts/simulation-architecture">
+    Explore the technical structure: classes, update loops, and visualization
+  </Card>
+  <Card title="Traffic Simulation" icon="car" href="/simulations/traffic-flow">
+    Deep dive into the urban intersection model
+  </Card>
+</CardGroup>

@@ -1,0 +1,461 @@
+---
+title: "Visualizador"
+description: "Real-time visualization and animation engine for the traffic simulation"
+icon: "chart-line"
+---
+
+## Overview
+
+The `Visualizador` class manages the graphical representation of the simulation using matplotlib. It renders the intersection in real-time and displays historical performance metrics.
+
+**Visual layout:**
+
+```
+┌─────────────────────────┬──────────────────┐
+│                         │   Flow Graph     │
+│   Intersection View     │──────────────────│
+│                         │  Density Graph   │
+└─────────────────────────┴──────────────────┘
+```
+
+- **Left column:** Real-time intersection visualization with streets, traffic lights, and vehicles
+- **Right column:** Time-series metrics showing traffic fluidity and vehicle density
+
+**Class location:** `simulacion_trafico_ciudad.py`, line 660
+
+---
+
+## Constructor
+
+```python
+Visualizador(ciudad: Ciudad, total_pasos: int = 300)
+```
+
+Creates the visualization engine with configured matplotlib figure and axes.
+
+<ParamField path="ciudad" type="Ciudad" required>
+  Reference to the `Ciudad` environment object containing all simulation elements
+</ParamField>
+
+<ParamField path="total_pasos" type="int" default="300">
+  Total number of animation frames (simulation duration in steps)
+</ParamField>
+
+### Example
+
+```python
+from simulacion_trafico_ciudad import Ciudad, Visualizador
+
+ciudad = Ciudad()
+visualizador = Visualizador(ciudad, total_pasos=500)
+
+# Launch animation
+animacion = visualizador.ejecutar()
+```
+
+---
+
+## Instance Attributes
+
+<ResponseField name="ciudad" type="Ciudad">
+  Reference to the environment being visualized
+</ResponseField>
+
+<ResponseField name="total_pasos" type="int">
+  Animation duration in frames
+</ResponseField>
+
+<ResponseField name="figura" type="matplotlib.figure.Figure">
+  Main matplotlib figure with size `(16, 8)` inches and dark background `#1a1a2e`
+</ResponseField>
+
+<ResponseField name="eje_ciudad" type="matplotlib.axes.Axes">
+  Left subplot showing the intersection view (spans both rows)
+</ResponseField>
+
+<ResponseField name="eje_fluidez" type="matplotlib.axes.Axes">
+  Top-right subplot displaying traffic flow percentage over time
+</ResponseField>
+
+<ResponseField name="eje_densidad" type="matplotlib.axes.Axes">
+  Bottom-right subplot displaying active and stopped vehicle counts over time
+</ResponseField>
+
+---
+
+## Public Methods
+
+### ejecutar()
+
+```python
+def ejecutar() -> matplotlib.animation.FuncAnimation
+```
+
+Configures and launches the animation using `matplotlib.animation.FuncAnimation`.
+
+**Animation parameters:**
+- **Frame function:** `_actualizar_frame()` - called once per frame
+- **Total frames:** `total_pasos`
+- **Interval:** 120 milliseconds between frames (~8 FPS)
+- **Repeat:** `False` - animation stops after completion
+- **Blit:** `False` - full redraw for Colab compatibility
+
+<ResponseField name="return" type="FuncAnimation">
+  Animation object. **Must be assigned to a variable** to prevent garbage collection before completion.
+</ResponseField>
+
+#### Example
+
+```python
+ciudad = Ciudad()
+visualizador = Visualizador(ciudad, total_pasos=300)
+
+# Store animation reference to prevent premature deletion
+anim = visualizador.ejecutar()
+```
+
+---
+
+## Private Drawing Methods
+
+### _actualizar_frame()
+
+```python
+def _actualizar_frame(numero_frame: int) -> None
+```
+
+**Core animation function** called automatically by `FuncAnimation` for each frame.
+
+**Execution flow:**
+1. Advance simulation one step via `ciudad.actualizar()`
+2. Clear all axes with `.cla()`
+3. Redraw complete scene with updated state
+
+<ParamField path="numero_frame" type="int" required>
+  Current frame number (0 to total_pasos-1), provided automatically by FuncAnimation
+</ParamField>
+
+**Drawing sequence:**
+```python
+_dibujar_calles()           # Static infrastructure
+_dibujar_semaforos()        # Updated traffic lights
+_dibujar_autos()            # Updated vehicle positions
+_dibujar_leyenda()          # Visual legend
+_configurar_eje_ciudad()    # Titles and axes
+_dibujar_grafico_fluidez()  # Historical metrics
+_dibujar_grafico_densidad()
+```
+
+---
+
+### _dibujar_calles()
+
+```python
+def _dibujar_calles() -> None
+```
+
+Draws the static intersection infrastructure:
+
+**Components rendered:**
+- Horizontal street block (asphalt `#2d2d2d`)
+- Vertical street block (asphalt `#2d2d2d`)
+- Center lane lines (white dashed `#EEEEEE`)
+- Intersection zone (lighter `#3a3a3a` with border)
+- Street edge borders (gray `#888899`)
+
+**Visual design:** Uses `FancyBboxPatch` for rounded corners and clean geometry.
+
+---
+
+### _dibujar_semaforos()
+
+```python
+def _dibujar_semaforos() -> None
+```
+
+Draws all 4 traffic lights as rectangular housings with colored indicator lights.
+
+**Visual structure for each traffic light:**
+```
+┌─────┐
+│  ●  │  ← Colored circle (green/yellow/red)
+└─────┘
+```
+
+**Components per traffic light:**
+- Black rectangular housing (`#111111`) with rounded corners
+- Colored circle at center using `semaforo.color_visual`
+- Glow halo effect (15% alpha) for "lit" appearance
+
+**Z-order layering:** Traffic lights (6-7) above streets (1-2) but below vehicles (8)
+
+---
+
+### _dibujar_autos()
+
+```python
+def _dibujar_autos() -> None
+```
+
+Draws each vehicle as an oriented rectangle with visual feedback for stopped state.
+
+**Vehicle dimensions by direction:**
+- **Horizontal** (`DERECHA`, `IZQUIERDA`): `1.0 × 0.55` cells (wide rectangle)
+- **Vertical** (`ARRIBA`, `ABAJO`): `0.55 × 1.0` cells (tall rectangle)
+
+**Visual indicators:**
+- **Stopped vehicles:** White border (`#FFFFFF`, linewidth 1.2)
+- **Moving vehicles:** No border
+- **Transparency:** 88% opacity for better visual blending
+
+**Colors:**
+- Blue `#1565C0` for horizontal traffic
+- Red `#C62828` for vertical traffic
+
+---
+
+### _dibujar_leyenda()
+
+```python
+def _dibujar_leyenda() -> None
+```
+
+Adds a custom legend to the intersection view with visual element explanations.
+
+**Legend entries:**
+- Auto horizontal (→ ←) - Blue square
+- Auto vertical (↑ ↓) - Red square
+- Auto detenido - Square with white border
+- Semáforo VERDE - Green circle
+- Semáforo AMARILLO - Yellow circle
+- Semáforo ROJO - Red circle
+
+**Positioning:** Upper right corner with semi-transparent dark background
+
+---
+
+### _configurar_eje_ciudad()
+
+```python
+def _configurar_eje_ciudad(paso_actual: int) -> None
+```
+
+Applies limits, labels, and title to the main intersection axis.
+
+<ParamField path="paso_actual" type="int" required>
+  Current simulation step for display in title
+</ParamField>
+
+**Configuration:**
+- X/Y limits: `[-0.5, ANCHO_CUADRICULA + 0.5]`
+- Aspect ratio: `'equal'` (square cells)
+- Title: `"Vista de la Intersección — Paso {paso_actual}/{total_pasos}"`
+- Grid: Disabled for clean map appearance
+
+---
+
+### _dibujar_grafico_fluidez()
+
+```python
+def _dibujar_grafico_fluidez() -> None
+```
+
+Renders the top-right graph showing **traffic flow fluidity percentage** over time.
+
+**Metric calculation:**
+```python
+if activos > 0:
+    porcentaje = ((activos - detenidos) / activos) * 100
+else:
+    porcentaje = 0.0
+```
+
+**Visual elements:**
+- Cyan line (`#4fc3f7`) plotting flow percentage
+- Yellow dashed line at 50% threshold (`#ffcc02`)
+- Filled area under curve (12% alpha)
+- Y-axis range: 0-105%
+
+**Interpretation:**
+- 100% = All vehicles moving (optimal flow)
+- 0% = All vehicles stopped (complete congestion)
+
+---
+
+### _dibujar_grafico_densidad()
+
+```python
+def _dibujar_grafico_densidad() -> None
+```
+
+Renders the bottom-right graph showing **vehicle density and congestion** over time.
+
+**Two time series:**
+- **Active vehicles** (green `#66BB6A`): Total vehicles on grid
+- **Stopped vehicles** (red `#EF5350`): Vehicles currently halted
+
+**Statistics box:** Displays current counts in monospace font:
+```
+Activos:    12
+Detenidos:  5
+Completados:78
+```
+
+**Visual elements:**
+- Filled area under stopped vehicle curve (15% alpha)
+- Grid overlay (20% alpha, `#444466`)
+- Dark legend with semi-transparent background
+
+---
+
+## Color Scheme (Dark Mode)
+
+The visualizer uses a consistent dark theme optimized for extended viewing:
+
+```python
+# Backgrounds
+Figure background:     #1a1a2e  (Very dark blue-gray)
+Axes background:       #16213e  (Dark blue)
+
+# Streets and infrastructure
+Asphalt:               #2d2d2d  (Dark gray)
+Intersection zone:     #3a3a3a  (Slightly lighter)
+Lane markings:         #EEEEEE  (White, dashed)
+Street borders:        #888899  (Light gray)
+
+# Vehicles
+Horizontal cars:       #1565C0  (Dark blue)
+Vertical cars:         #C62828  (Dark red)
+Stopped indicator:     #FFFFFF  (White border)
+
+# Traffic lights
+Green light:           #00CC44  (Saturated green)
+Yellow light:          #FFD700  (Golden yellow)
+Red light:             #FF2222  (Bright red)
+
+# Graphs
+Flow line:             #4fc3f7  (Cyan)
+Active vehicles:       #66BB6A  (Green)
+Stopped vehicles:      #EF5350  (Red)
+Threshold line:        #ffcc02  (Yellow)
+```
+
+---
+
+## Figure Layout (GridSpec)
+
+The layout uses `matplotlib.gridspec.GridSpec` for precise control:
+
+```python
+disposicion = figura.add_gridspec(
+    2, 2,                      # 2 rows × 2 columns
+    width_ratios=[2, 1],       # Left column 2× wider than right
+    hspace=0.35,               # Vertical spacing
+    wspace=0.3                 # Horizontal spacing
+)
+
+eje_ciudad   = figura.add_subplot(disposicion[:, 0])  # Spans both rows
+eje_fluidez  = figura.add_subplot(disposicion[0, 1])  # Top-right
+eje_densidad = figura.add_subplot(disposicion[1, 1])  # Bottom-right
+```
+
+**Dimensions:** `figsize=(16, 8)` inches creates a 2:1 aspect ratio suitable for wide displays.
+
+---
+
+## Animation Configuration
+
+The `ejecutar()` method uses these FuncAnimation parameters:
+
+```python
+objeto_animacion = animacion_mod.FuncAnimation(
+    fig=self.figura,
+    func=self._actualizar_frame,
+    frames=self.total_pasos,
+    interval=120,              # 120ms between frames → ~8 FPS
+    repeat=False,              # Stop after completion
+    blit=False                 # Full redraw (Colab compatible)
+)
+```
+
+**Frame rate calculation:**
+- Interval: 120 ms per frame
+- FPS: 1000 ÷ 120 ≈ 8.33 frames per second
+
+**Why blit=False?**
+Blit optimization (partial redraws) can cause rendering issues in Google Colab. Full redraws ensure compatibility across environments.
+
+---
+
+## Z-Order Layering
+
+Visual elements are rendered with explicit z-order for correct overlap:
+
+```python
+Layer 1-2:  Streets and infrastructure
+Layer 6-7:  Traffic lights
+Layer 8:    Vehicles (always on top)
+```
+
+**Example:**
+```python
+rect_horizontal = parches.FancyBboxPatch(
+    ...,
+    zorder=1  # Bottom layer
+)
+
+luz = plt.Circle(
+    ...,
+    zorder=7  # Middle layer
+)
+
+rect_auto = parches.FancyBboxPatch(
+    ...,
+    zorder=8  # Top layer
+)
+```
+
+---
+
+## Usage Example
+
+Complete workflow for running the visualization:
+
+```python
+import matplotlib.pyplot as plt
+from simulacion_trafico_ciudad import Ciudad, Visualizador, Auto, SentidoVia
+
+# 1. Create environment
+ciudad = Ciudad()
+
+# 2. Optional: Add initial vehicles
+auto_inicial = Auto(5.0, 10.5, SentidoVia.DERECHA)
+ciudad.lista_autos.append(auto_inicial)
+ciudad.total_autos_creados += 1
+
+# 3. Create visualizer
+visualizador = Visualizador(ciudad, total_pasos=300)
+
+# 4. Launch animation (store reference!)
+animacion = visualizador.ejecutar()
+
+# 5. Animation runs automatically until total_pasos reached
+
+# 6. Access final statistics
+print(f"Total created: {ciudad.total_autos_creados}")
+print(f"Completed: {ciudad.total_autos_completados}")
+print(f"Still active: {len(ciudad.lista_autos)}")
+```
+
+---
+
+## Design Pattern: Observer Visualizer
+
+The `Visualizador` class implements the **Observer** pattern:
+
+- **Non-intrusive:** Only reads state, never modifies simulation logic
+- **Reactive:** Updates display in response to environment changes
+- **Decoupled:** Simulation runs independently of visualization
+- **Real-time:** Renders each frame synchronously with simulation step
+
+**Key principle:** The visualizer observes and displays but never controls. The simulation would produce identical results with or without visualization.

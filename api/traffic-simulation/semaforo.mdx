@@ -1,0 +1,318 @@
+---
+title: "Semaforo"
+description: "Traffic light controller class and state enumeration"
+icon: "traffic-light"
+---
+
+## Overview
+
+The `Semaforo` class represents a traffic light that controls ONE entry lane to the intersection. Each traffic light follows an autonomous cycle: GREEN → YELLOW → RED, and can be queried by vehicles to determine whether they can proceed.
+
+**Key responsibilities:**
+- Maintains visual position for rendering
+- Follows a periodic state cycle autonomously
+- Provides pass/stop information to vehicles
+- Synchronizes with other lights via phase offset
+
+**Class location:** `simulacion_trafico_ciudad.py`, line 109
+
+---
+
+## Constructor
+
+```python
+Semaforo(pos_x: float, pos_y: float, sentidos_controlados: list, fase_inicial: int = 0)
+```
+
+Creates a new traffic light controller at the specified position.
+
+<ParamField path="pos_x" type="float" required>
+  X coordinate in the grid for visual rendering
+</ParamField>
+
+<ParamField path="pos_y" type="float" required>
+  Y coordinate in the grid for visual rendering
+</ParamField>
+
+<ParamField path="sentidos_controlados" type="list" required>
+  List of `SentidoVia` enum values that this traffic light regulates. Example: `[SentidoVia.DERECHA]`
+</ParamField>
+
+<ParamField path="fase_inicial" type="int" default="0">
+  Phase offset in steps to synchronize cycles. 
+  - `0` = starts in GREEN
+  - `PASOS_VERDE + PASOS_AMARILLO` (50) = starts in RED
+</ParamField>
+
+### Example
+
+```python
+from simulacion_trafico_ciudad import Semaforo, SentidoVia
+
+# Traffic light controlling rightward traffic, starting in GREEN
+semaforo_este = Semaforo(
+    pos_x=7.0,
+    pos_y=10.5,
+    sentidos_controlados=[SentidoVia.DERECHA],
+    fase_inicial=0
+)
+
+# Traffic light controlling upward traffic, starting in RED (phase 50)
+semaforo_sur = Semaforo(
+    pos_x=9.5,
+    pos_y=7.0,
+    sentidos_controlados=[SentidoVia.ARRIBA],
+    fase_inicial=50  # PASOS_VERDE + PASOS_AMARILLO
+)
+```
+
+---
+
+## Instance Attributes
+
+<ResponseField name="pos_x" type="float">
+  X coordinate position (used only for rendering on the canvas)
+</ResponseField>
+
+<ResponseField name="pos_y" type="float">
+  Y coordinate position (used only for rendering on the canvas)
+</ResponseField>
+
+<ResponseField name="sentidos_controlados" type="list">
+  List of `SentidoVia` traffic flows that this light regulates
+</ResponseField>
+
+<ResponseField name="contador_ciclo" type="int">
+  Internal counter of elapsed steps within the current cycle. Initialized to `fase_inicial` and wraps around using modulo arithmetic
+</ResponseField>
+
+<ResponseField name="duracion_ciclo" type="int">
+  Total duration of one complete cycle in animation steps:
+  ```python
+  duracion_ciclo = PASOS_VERDE + PASOS_AMARILLO + PASOS_ROJO
+  # Default: 40 + 10 + 50 = 100 steps
+  ```
+</ResponseField>
+
+<ResponseField name="estado_actual" type="EstadoSemaforo">
+  Current state of the traffic light, calculated from `contador_ciclo` via `_calcular_estado()`
+</ResponseField>
+
+---
+
+## Methods
+
+### actualizar()
+
+```python
+def actualizar() -> None
+```
+
+Advances the internal counter by one step and recalculates the state. **Must be called once per animation frame.**
+
+The modulo operator (`%`) automatically resets the counter when a complete cycle finishes, creating the perpetual GREEN → YELLOW → RED loop.
+
+**Side effects:**
+- Increments `contador_ciclo` by 1
+- Wraps counter using `% duracion_ciclo`
+- Updates `estado_actual` by calling `_calcular_estado()`
+
+#### Example
+
+```python
+for semaforo in ciudad.lista_semaforos:
+    semaforo.actualizar()  # Advance one step in the cycle
+```
+
+---
+
+### puede_pasar()
+
+```python
+def puede_pasar(sentido_auto: SentidoVia) -> bool
+```
+
+Answers the question: **Can a vehicle with this direction proceed now?**
+
+**Traffic rule:**
+- Only `EstadoSemaforo.VERDE` allows passage
+- `AMARILLO` and `ROJO` require stopping
+- If the vehicle's direction is not in `sentidos_controlados`, the light doesn't affect it (returns `True`)
+
+<ParamField path="sentido_auto" type="SentidoVia" required>
+  The direction (`SentidoVia`) of the vehicle making the inquiry
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  `True` if the vehicle can proceed, `False` if it must stop
+</ResponseField>
+
+#### Example
+
+```python
+auto = Auto(5.0, 10.5, SentidoVia.DERECHA)
+semaforo = ciudad.lista_semaforos[0]
+
+if semaforo.puede_pasar(auto.sentido):
+    print("Green light - proceed")
+else:
+    print("Red/Yellow light - stop")
+    auto.esta_detenido = True
+```
+
+---
+
+### color_visual (property)
+
+```python
+@property
+def color_visual() -> str
+```
+
+Returns the HEX color code corresponding to the current state. **Used exclusively by the visualizer** to render the traffic light.
+
+<ResponseField name="return" type="str">
+  HEX color string:
+  - `"#00CC44"` - Saturated green (VERDE)
+  - `"#FFD700"` - Golden yellow (AMARILLO)
+  - `"#FF2222"` - Bright red (ROJO)
+</ResponseField>
+
+#### Example
+
+```python
+color = semaforo.color_visual
+plt.Circle((semaforo.pos_x, semaforo.pos_y), radius=0.28, color=color)
+```
+
+---
+
+## Private Methods
+
+### _calcular_estado()
+
+```python
+def _calcular_estado() -> EstadoSemaforo
+```
+
+Determines the traffic light state based on the current position in the cycle.
+
+**Cycle division into three consecutive segments:**
+
+```python
+if contador_ciclo < PASOS_VERDE:                           # [0, 40)
+    return EstadoSemaforo.VERDE
+elif contador_ciclo < PASOS_VERDE + PASOS_AMARILLO:        # [40, 50)
+    return EstadoSemaforo.AMARILLO
+else:                                                       # [50, 100)
+    return EstadoSemaforo.ROJO
+```
+
+**Returns:** The calculated `EstadoSemaforo` enum value
+
+---
+
+## State Cycle Constants
+
+The traffic light cycle uses these global constants:
+
+```python
+PASOS_VERDE    = 40   # Green light duration (frames)
+PASOS_AMARILLO = 10   # Yellow light duration (frames)
+PASOS_ROJO     = 50   # Red light duration (frames)
+
+# Total cycle = 40 + 10 + 50 = 100 frames
+```
+
+---
+
+## EstadoSemaforo Enum
+
+Represents the three possible states of a traffic light.
+
+```python
+class EstadoSemaforo(Enum):
+    VERDE    = "VERDE"     # Vehicle can proceed freely
+    AMARILLO = "AMARILLO"  # Vehicle must stop (transition state)
+    ROJO     = "ROJO"      # Vehicle is fully stopped
+```
+
+**Why use Enum instead of strings or integers?**
+- Prevents typos (`EstadoSemaforo.VERDE` vs error-prone `"VREDE"`)
+- Makes code self-documenting
+- Enables IDE autocomplete and type checking
+
+### Usage Example
+
+```python
+if semaforo.estado_actual == EstadoSemaforo.VERDE:
+    print("Proceed through intersection")
+elif semaforo.estado_actual == EstadoSemaforo.AMARILLO:
+    print("Prepare to stop")
+else:  # ROJO
+    print("Full stop required")
+```
+
+---
+
+## Phase Synchronization
+
+The `Ciudad` class creates four traffic lights with strategic phase offsets to ensure **perpendicular flows never have simultaneous green lights:**
+
+```python
+# Horizontal traffic lights (DERECHA, IZQUIERDA)
+# Start at phase 0 → initially GREEN
+semaforo_horizontal = Semaforo(
+    pos_x=7.0, pos_y=10.5,
+    sentidos_controlados=[SentidoVia.DERECHA],
+    fase_inicial=0
+)
+
+# Vertical traffic lights (ARRIBA, ABAJO)
+# Start at phase 50 → initially RED
+fase_inicial_rojo = PASOS_VERDE + PASOS_AMARILLO  # = 50
+semaforo_vertical = Semaforo(
+    pos_x=9.5, pos_y=7.0,
+    sentidos_controlados=[SentidoVia.ARRIBA],
+    fase_inicial=fase_inicial_rojo
+)
+```
+
+**Result:** When horizontal lights are green (steps 0-39), vertical lights are red (steps 50-99 of their cycle). This prevents collisions at the intersection.
+
+---
+
+## Traffic Light Color Mapping
+
+The `color_visual` property uses this internal mapping:
+
+```python
+mapa_colores = {
+    EstadoSemaforo.VERDE:    "#00CC44",   # Saturated green
+    EstadoSemaforo.AMARILLO: "#FFD700",   # Golden yellow
+    EstadoSemaforo.ROJO:     "#FF2222",   # Bright red
+}
+return mapa_colores[self.estado_actual]
+```
+
+These colors are optimized for **dark mode visualization** with high contrast against the `#16213e` background.
+
+---
+
+## Design Pattern: Finite State Machine
+
+The `Semaforo` class implements a **Cyclic Finite State Machine** with three states:
+
+```
+┌──────┐    40 steps     ┌──────────┐    10 steps     ┌──────┐
+│ VERDE│ ─────────────> │ AMARILLO │ ─────────────> │ ROJO │
+└──────┘                 └──────────┘                 └──────┘
+   ▲                                                      │
+   └──────────────────── 50 steps ───────────────────────┘
+```
+
+**Characteristics:**
+- **Deterministic:** State transitions are predictable and time-based
+- **Autonomous:** Each traffic light advances independently
+- **Synchronized:** Phase offsets coordinate multiple lights without direct communication
+- **Perpetual:** The cycle repeats indefinitely using modulo arithmetic

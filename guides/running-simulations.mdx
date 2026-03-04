@@ -1,0 +1,266 @@
+---
+title: 'Running Simulations'
+description: 'Learn how to execute agent-based simulations using different methods'
+icon: 'play'
+---
+
+## Overview
+
+This guide covers multiple ways to run the agent-based modeling simulations in this project. You can execute simulations via command line, VS Code, or directly from Python scripts.
+
+## Available Simulations
+
+The project includes two main simulations:
+
+<CardGroup cols={2}>
+  <Card title="Student Movement" icon="users">
+    Simulates student movement across campus locations (classroom, library, cafeteria)
+  </Card>
+  <Card title="Traffic Intersection" icon="traffic-light">
+    Models traffic flow through a 4-way intersection with traffic lights
+  </Card>
+</CardGroup>
+
+## Running from Command Line
+
+<Steps>
+  <Step title="Navigate to source directory">
+    ```bash
+    cd workspace/source
+    ```
+  </Step>
+
+  <Step title="Run the student simulation">
+    <CodeGroup>
+      ```bash Default Parameters
+      python run_sim.py
+      ```
+
+      ```bash Custom Parameters
+      python run_sim.py --num 80 --pasos 150
+      ```
+
+      ```bash Help
+      python run_sim.py --help
+      ```
+    </CodeGroup>
+
+    <ParamField path="--num" type="integer" default="50">
+      Number of students to simulate
+    </ParamField>
+
+    <ParamField path="--pasos" type="integer" default="100">
+      Number of simulation steps to run
+    </ParamField>
+  </Step>
+
+  <Step title="Run the traffic simulation">
+    <CodeGroup>
+      ```bash Default Parameters
+      cd "PARCIAL 1/simulation/trafico en una ciudad"
+      python run_traffic.py
+      ```
+
+      ```bash Custom Parameters
+      python run_traffic.py --ancho 25 --alto 25 --pasos 300
+      ```
+
+      ```bash Help
+      python run_traffic.py --help
+      ```
+    </CodeGroup>
+
+    <ParamField path="--ancho" type="integer" default="20">
+      Width of the city grid in cells
+    </ParamField>
+
+    <ParamField path="--alto" type="integer" default="20">
+      Height of the city grid in cells
+    </ParamField>
+
+    <ParamField path="--pasos" type="integer" default="200">
+      Number of simulation steps (frames)
+    </ParamField>
+  </Step>
+</Steps>
+
+## Running from VS Code
+
+You can use VS Code's built-in debugging to run simulations interactively.
+
+<Steps>
+  <Step title="Open the simulation file">
+    Navigate to the simulation script:
+    - Student: `PARCIAL 1/simulation/movimiento estudiantes universidad/simulacion_movimiento_estudiantes_universidad.py`
+    - Traffic: `PARCIAL 1/simulation/trafico en una ciudad/simulacion_trafico_ciudad.py`
+  </Step>
+
+  <Step title="Press F5 to run">
+    The simulation will execute with default parameters and display the matplotlib animation window.
+  </Step>
+
+  <Step title="Modify parameters in code (optional)">
+    Scroll to the bottom of the file and edit the function call:
+
+    ```python Student Simulation
+    ejecutar_simulacion(
+        num_estudiantes=80,  # Change this
+        pasos=150           # Change this
+    )
+    ```
+
+    ```python Traffic Simulation
+    ejecutar_simulacion(
+        ancho_ciudad=25,  # Change this
+        alto_ciudad=25,   # Change this
+        pasos=300        # Change this
+    )
+    ```
+  </Step>
+</Steps>
+
+## Running from Python Shell
+
+You can import and run simulations programmatically from an interactive Python session.
+
+<CodeGroup>
+  ```python Student Simulation
+  import sys
+  from pathlib import Path
+  
+  # Add source directory to path
+  sys.path.insert(0, str(Path('workspace/source/PARCIAL 1/simulation/movimiento estudiantes universidad')))
+  
+  import simulacion_movimiento_estudiantes_universidad as sim_student
+  
+  # Run with custom parameters
+  campus, viz, anim = sim_student.ejecutar_simulacion(
+      num_estudiantes=60,
+      pasos=120
+  )
+  ```
+
+  ```python Traffic Simulation
+  import sys
+  from pathlib import Path
+  
+  sys.path.insert(0, str(Path('workspace/source/PARCIAL 1/simulation/trafico en una ciudad')))
+  
+  import simulacion_trafico_ciudad as sim_traffic
+  
+  # Run with custom parameters
+  sim_traffic.ejecutar_simulacion(
+      ancho_ciudad=30,
+      alto_ciudad=30,
+      pasos=250
+  )
+  ```
+</CodeGroup>
+
+## Expected Output
+
+When you run a simulation, you'll see:
+
+<Steps>
+  <Step title="Console messages">
+    Initialization information with parameters and initial state:
+
+    ```plaintext Student Simulation Output
+    ======================================================================
+    INICIANDO SIMULACIÓN DE MOVIMIENTO DE ESTUDIANTES
+    ======================================================================
+
+    Parámetros de simulación:
+      - Número de estudiantes: 50
+      - Pasos de simulación: 100
+
+    Creando campus universitario...
+    Campus creado exitosamente!
+
+    Capacidades de cada espacio:
+      - Aula: 30 estudiantes
+      - Biblioteca: 25 estudiantes
+      - Cafetería: 20 estudiantes
+
+    Distribución inicial:
+      - Aula: 30 estudiantes (100.0%)
+      - Biblioteca: 10 estudiantes (40.0%)
+      - Cafetería: 10 estudiantes (50.0%)
+
+    ¡Iniciando visualización animada!
+    ```
+  </Step>
+
+  <Step title="Animated visualization window">
+    A matplotlib window will open showing:
+    - **Left panel**: Spatial view of agents moving in real-time
+    - **Right panel**: Time-series graphs tracking metrics
+  </Step>
+
+  <Step title="Final statistics">
+    After the simulation completes:
+
+    ```plaintext
+    ======================================================================
+    SIMULACIÓN COMPLETADA
+    ======================================================================
+
+    Distribución final:
+      - Aula: 18 estudiantes (60.0%)
+      - Biblioteca: 16 estudiantes (64.0%)
+      - Cafetería: 16 estudiantes (80.0%)
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  The animation runs at 500ms per frame for student simulation. Traffic simulation speed is controlled by matplotlib's FuncAnimation interval parameter (default settings).
+</Note>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="ModuleNotFoundError">
+    Ensure you're running from the correct directory and all dependencies are installed:
+
+    ```bash
+    pip install matplotlib numpy
+    ```
+  </Accordion>
+
+  <Accordion title="Animation window doesn't appear">
+    This can happen in some environments. Try setting the matplotlib backend:
+
+    ```python
+    import matplotlib
+    matplotlib.use('TkAgg')
+    import matplotlib.pyplot as plt
+    ```
+  </Accordion>
+
+  <Accordion title="Simulation runs too fast/slow">
+    Edit the `interval` parameter in the `FuncAnimation` call within the simulation file:
+
+    ```python
+    anim = animation.FuncAnimation(
+        self.fig,
+        self._actualizar_animacion,
+        frames=self.pasos_simulacion,
+        interval=500,  # Increase for slower, decrease for faster
+        repeat=False,
+        blit=False
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Customize Parameters" icon="sliders" href="/guides/customizing-parameters">
+    Learn how to modify simulation behavior
+  </Card>
+  <Card title="Understand Visualization" icon="chart-line" href="/guides/visualization">
+    Interpret the graphs and metrics
+  </Card>
+</CardGroup>

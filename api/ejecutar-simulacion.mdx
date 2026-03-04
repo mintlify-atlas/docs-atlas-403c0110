@@ -1,0 +1,229 @@
+---
+title: "ejecutar_simulacion()"
+description: "Run agent-based simulations with animated visualizations"
+---
+
+## Overview
+
+The `ejecutar_simulacion()` function is the main entry point for running agent-based modeling simulations. Two versions exist for different simulation scenarios:
+
+1. **Student Movement Simulation** - Models student flow across university campus spaces
+2. **Traffic Simulation** - Models vehicle traffic through an urban intersection
+
+Both functions initialize the simulation environment, run the agent-based model, and display real-time animated visualizations using matplotlib.
+
+---
+
+## Student Movement Version
+
+Simulates how students move between different campus spaces (classroom, library, cafeteria) based on occupancy levels.
+
+### Function Signature
+
+```python
+def ejecutar_simulacion(num_estudiantes=50, pasos=100)
+```
+
+### Parameters
+
+<ParamField path="num_estudiantes" type="int" default="50">
+  Number of student agents to simulate in the campus environment.
+  
+  - Recommended range: 20-100
+  - Higher values increase visual complexity
+  - Must be positive integer
+</ParamField>
+
+<ParamField path="pasos" type="int" default="100">
+  Number of simulation time steps to execute.
+  
+  - Each step represents one decision cycle for all agents
+  - Animation interval: 500ms per step
+  - Recommended range: 50-200 steps
+</ParamField>
+
+### Returns
+
+Returns a tuple containing three objects:
+
+```python
+(campus, visualizador, anim)
+```
+
+- **campus** (`CampusUniversitario`) - The environment object containing all students and state
+- **visualizador** (`VisualizadorSimulacion`) - The visualization controller
+- **anim** (`matplotlib.animation.FuncAnimation`) - The animation object
+
+### Usage Example
+
+```python
+# Import the simulation module
+from simulacion_movimiento_estudiantes_universidad import ejecutar_simulacion
+
+# Run with default parameters (50 students, 100 steps)
+campus, visualizador, animacion = ejecutar_simulacion()
+
+# Run with custom parameters
+campus, visualizador, animacion = ejecutar_simulacion(
+    num_estudiantes=80,
+    pasos=150
+)
+
+# Access simulation statistics after completion
+stats = campus.obtener_estadisticas()
+print(f"Final occupancy: {stats}")
+```
+
+### Source Location
+
+```
+~/workspace/source/PARCIAL 1/simulation/movimiento estudiantes universidad/
+  simulacion_movimiento_estudiantes_universidad.py:538
+```
+
+---
+
+## Traffic Simulation Version
+
+Simulates vehicle traffic through a four-way intersection with traffic lights, modeling autonomous agent behavior for collision avoidance and signal compliance.
+
+### Function Signature
+
+```python
+def ejecutar_simulacion(total_pasos=300)
+```
+
+### Parameters
+
+<ParamField path="total_pasos" type="int" default="300">
+  Total number of animation frames (simulation time steps) to execute.
+  
+  - Each step updates traffic lights and moves all vehicles
+  - Animation interval: 120ms per step (~8 fps)
+  - Recommended range: 200-500 steps
+  - Longer simulations show emergent traffic patterns
+</ParamField>
+
+### Returns
+
+Returns a tuple containing three objects:
+
+```python
+(ciudad, visualizador, anim)
+```
+
+- **ciudad** (`Ciudad`) - The environment containing all vehicles, traffic lights, and intersection state
+- **visualizador** (`Visualizador`) - The visualization controller with multi-panel display
+- **anim** (`matplotlib.animation.FuncAnimation`) - The animation object
+
+### Usage Example
+
+```python
+# Import the simulation module
+from simulacion_trafico_ciudad import ejecutar_simulacion
+
+# Run with default parameters (300 steps)
+ciudad, visualizador, animacion = ejecutar_simulacion()
+
+# Run longer simulation to observe traffic patterns
+ciudad, visualizador, animacion = ejecutar_simulacion(total_pasos=500)
+
+# Access simulation metrics after completion
+print(f"Total vehicles created: {ciudad.total_autos_creados}")
+print(f"Vehicles completed: {ciudad.total_autos_completados}")
+print(f"Vehicles still active: {len(ciudad.lista_autos)}")
+```
+
+### Source Location
+
+```
+~/workspace/source/PARCIAL 1/simulation/trafico en una ciudad/
+  simulacion_trafico_ciudad.py:1098
+```
+
+---
+
+## Running via Wrapper Scripts
+
+Both simulations can also be executed through convenience wrapper scripts:
+
+### Student Simulation Wrapper
+
+```bash
+python run_sim.py
+```
+
+This script imports and calls the student movement `ejecutar_simulacion()` function with default parameters.
+
+### Traffic Simulation Wrapper
+
+```bash
+python run_traffic.py
+```
+
+This script imports and calls the traffic `ejecutar_simulacion()` function with default parameters.
+
+---
+
+## Simulation Output
+
+### Console Output
+
+Both functions print detailed configuration and progress information:
+
+**Student Simulation:**
+```
+======================================================================
+INICIANDO SIMULACIÓN DE MOVIMIENTO DE ESTUDIANTES
+======================================================================
+
+Parámetros de simulación:
+  - Número de estudiantes: 50
+  - Pasos de simulación: 100
+
+Creando campus universitario...
+Campus creado exitosamente!
+
+Capacidades de cada espacio:
+  - Aula: 30 estudiantes
+  - Biblioteca: 25 estudiantes
+  - Cafetería: 20 estudiantes
+```
+
+**Traffic Simulation:**
+```
+=================================================================
+   SIMULACIÓN DE TRÁFICO — INTERSECCIÓN URBANA
+   Modelo Basado en Agentes | Python + matplotlib
+=================================================================
+
+  Configuración del entorno:
+    Cuadrícula      : 20 x 20 celdas
+    Centro cruce    : (10, 10)
+    Ancho de calle  : 3 celdas (2 carriles)
+    Semáforos       : 4 (uno por vía de entrada)
+```
+
+### Visual Output
+
+Both simulations display matplotlib animation windows with:
+
+- **Student Simulation**: Split-view showing campus map with moving agents and occupancy time-series charts
+- **Traffic Simulation**: Three-panel display with intersection view, traffic flow metrics, and vehicle density graphs
+
+---
+
+## Notes
+
+- Both simulations require matplotlib for visualization
+- Designed for Google Colab and Jupyter notebook environments
+- Use `plt.style.use()` before calling to customize appearance
+- Animation objects must be retained in a variable to prevent garbage collection
+- Press Ctrl+C in terminal to interrupt long-running simulations
+
+## See Also
+
+- [CampusUniversitario](/api/campus-universitario) - Student simulation environment class
+- [Estudiante](/api/estudiante) - Student agent class
+- [Ciudad](/api/ciudad) - Traffic simulation environment class
+- [Auto](/api/auto) - Vehicle agent class

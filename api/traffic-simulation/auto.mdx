@@ -1,0 +1,282 @@
+---
+title: "Auto"
+description: "Agent class representing a vehicle in the traffic simulation"
+icon: "car"
+---
+
+## Overview
+
+The `Auto` class represents an autonomous vehicle agent circulating through the intersection. Each car follows traffic rules by obeying traffic lights and avoiding collisions with other vehicles.
+
+**Behavior characteristics:**
+- Moves in a straight line according to its direction (never turns)
+- Detects and obeys traffic lights ahead
+- Maintains safe distance from other vehicles
+- Disappears when exiting the grid boundaries
+
+**Class location:** `simulacion_trafico_ciudad.py`, line 214
+
+---
+
+## Constructor
+
+```python
+Auto(pos_x: float, pos_y: float, sentido: SentidoVia)
+```
+
+Creates a new vehicle agent at the specified position with the given direction.
+
+<ParamField path="pos_x" type="float" required>
+  Initial X coordinate in the grid system
+</ParamField>
+
+<ParamField path="pos_y" type="float" required>
+  Initial Y coordinate in the grid system
+</ParamField>
+
+<ParamField path="sentido" type="SentidoVia" required>
+  Direction of circulation. Must be one of:
+  - `SentidoVia.DERECHA` - Horizontal left-to-right
+  - `SentidoVia.IZQUIERDA` - Horizontal right-to-left
+  - `SentidoVia.ARRIBA` - Vertical bottom-to-top
+  - `SentidoVia.ABAJO` - Vertical top-to-bottom
+</ParamField>
+
+### Example
+
+```python
+from simulacion_trafico_ciudad import Auto, SentidoVia
+
+# Create a car moving to the right at position (5.0, 10.5)
+carro = Auto(pos_x=5.0, pos_y=10.5, sentido=SentidoVia.DERECHA)
+print(f"Car ID: {carro.id_auto}")  # Unique identifier
+```
+
+---
+
+## Instance Attributes
+
+<ResponseField name="id_auto" type="int">
+  Unique identifier assigned automatically from the global counter `contador_global_autos`
+</ResponseField>
+
+<ResponseField name="pos_x" type="float">
+  Current X coordinate position (floating point for smooth movement)
+</ResponseField>
+
+<ResponseField name="pos_y" type="float">
+  Current Y coordinate position (floating point for smooth movement)
+</ResponseField>
+
+<ResponseField name="sentido" type="SentidoVia">
+  Direction of circulation - defines both movement direction and lane assignment
+</ResponseField>
+
+<ResponseField name="auto_velocidad" type="float">
+  Movement speed in cells per animation step (defaults to `VELOCIDAD_AUTO = 0.4`)
+</ResponseField>
+
+<ResponseField name="esta_detenido" type="bool">
+  Operational state flag:
+  - `True` = vehicle is stopped
+  - `False` = vehicle is in motion
+</ResponseField>
+
+<ResponseField name="color_auto" type="str">
+  Visual color assigned by circulation axis:
+  - `"#1565C0"` (dark blue) for horizontal vehicles
+  - `"#C62828"` (dark red) for vertical vehicles
+</ResponseField>
+
+<ResponseField name="fuera_de_pantalla" type="bool">
+  Flag set to `True` when the vehicle exits grid boundaries and should be removed
+</ResponseField>
+
+---
+
+## Class Attributes
+
+<ResponseField name="contador_global_autos" type="int">
+  Static counter that tracks total vehicles created across all instances. Used to assign unique IDs.
+</ResponseField>
+
+---
+
+## Methods
+
+### actualizar()
+
+```python
+def actualizar(lista_semaforos: list, lista_autos: list) -> None
+```
+
+Core decision-making and movement logic executed once per simulation step.
+
+**Decision hierarchy (mirrors real-world driving):**
+1. Check for vehicle directly ahead → Stop (highest priority)
+2. Check traffic light status → Stop if YELLOW or RED
+3. If unobstructed → Advance
+
+This hierarchy ensures traffic safety in the simulation.
+
+<ParamField path="lista_semaforos" type="list" required>
+  List of all `Semaforo` objects in the city for traffic light detection
+</ParamField>
+
+<ParamField path="lista_autos" type="list" required>
+  List of all `Auto` objects for collision avoidance detection
+</ParamField>
+
+**Side effects:**
+- Updates `pos_x` and `pos_y` if vehicle advances
+- Sets `esta_detenido` to `True` if stopped, `False` if moving
+- Sets `fuera_de_pantalla` to `True` if vehicle exits boundaries
+
+#### Example
+
+```python
+# Called by Ciudad.actualizar() for each vehicle
+for auto in ciudad.lista_autos:
+    auto.actualizar(ciudad.lista_semaforos, ciudad.lista_autos)
+```
+
+---
+
+### detectar_semaforo_al_frente()
+
+```python
+def detectar_semaforo_al_frente(lista_semaforos: list) -> Semaforo | None
+```
+
+Searches for the relevant traffic light directly ahead within detection range.
+
+**Detection logic:**
+1. For each traffic light, verify it controls this vehicle's direction
+2. Check if the light is ahead (not behind) on the correct axis
+3. If within `DISTANCIA_DETECCION_SEMAFORO` (3.0 cells), it's relevant
+
+<ParamField path="lista_semaforos" type="list" required>
+  Complete list of `Semaforo` objects in the simulation
+</ParamField>
+
+<ResponseField name="return" type="Semaforo | None">
+  The nearest relevant traffic light ahead, or `None` if no traffic light is within detection range
+</ResponseField>
+
+#### Example
+
+```python
+semaforo = auto.detectar_semaforo_al_frente(ciudad.lista_semaforos)
+if semaforo is not None:
+    puede_avanzar = semaforo.puede_pasar(auto.sentido)
+    print(f"Traffic light detected: {semaforo.estado_actual.value}")
+```
+
+---
+
+### detectar_auto_al_frente()
+
+```python
+def detectar_auto_al_frente(lista_autos: list) -> bool
+```
+
+Verifies if another vehicle is directly ahead within the safety distance.
+
+**Collision avoidance is an emergent behavior:** each vehicle decides independently, but the global result is orderly traffic flow without a central controller.
+
+**Enhanced visual separation:**
+- `DISTANCIA_SEGURIDAD` set to 1.8 (> vehicle length 1.0 + margin 0.8)
+- `TOLERANCIA_LATERAL` adjusted to 0.65 to avoid confusing opposite lanes
+- Checks both the center and "tail" (center - half length) of other vehicles to detect overlap before it occurs visually
+
+<ParamField path="lista_autos" type="list" required>
+  Complete list of all `Auto` objects for proximity checking
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  `True` if a vehicle is blocking ahead, `False` if the path is clear
+</ResponseField>
+
+#### Example
+
+```python
+if auto.detectar_auto_al_frente(ciudad.lista_autos):
+    print("Vehicle ahead detected - stopping")
+    auto.esta_detenido = True
+else:
+    print("Path clear - proceeding")
+```
+
+---
+
+## Private Methods
+
+### _asignar_color()
+
+```python
+def _asignar_color() -> str
+```
+
+Assigns color based on the vehicle's circulation axis for visual differentiation.
+
+**Returns:**
+- `"#1565C0"` (dark blue) → horizontal vehicles
+- `"#C62828"` (dark red) → vertical vehicles
+
+---
+
+### _calcular_delta()
+
+```python
+def _calcular_delta() -> tuple[float, float]
+```
+
+Determines the displacement (delta_x, delta_y) for the current step based on direction.
+
+**Returns:** `(delta_x, delta_y)` tuple:
+- `DERECHA`: `(+velocidad, 0)`
+- `IZQUIERDA`: `(-velocidad, 0)`
+- `ARRIBA`: `(0, +velocidad)`
+- `ABAJO`: `(0, -velocidad)`
+
+---
+
+## Constants Used
+
+The `Auto` class uses these global constants from the simulation:
+
+```python
+VELOCIDAD_AUTO = 0.4                    # Cells advanced per step
+DISTANCIA_SEGURIDAD = 1.8               # Minimum distance between vehicles
+DISTANCIA_DETECCION_SEMAFORO = 3.0      # Traffic light detection range
+TOLERANCIA_LATERAL = 0.65               # Lateral tolerance for same-lane detection
+```
+
+---
+
+## Related Types
+
+### SentidoVia Enum
+
+Defines the four possible circulation directions:
+
+```python
+class SentidoVia(Enum):
+    DERECHA   = "DERECHA"    # Horizontal left-to-right
+    IZQUIERDA = "IZQUIERDA"  # Horizontal right-to-left
+    ARRIBA    = "ARRIBA"     # Vertical bottom-to-top
+    ABAJO     = "ABAJO"      # Vertical top-to-bottom
+```
+
+---
+
+## Design Pattern: Autonomous Agent
+
+The `Auto` class exemplifies the **Agent-Based Modeling** pattern:
+
+- **Autonomy:** Each vehicle makes its own decisions without external control
+- **Local perception:** Vehicles only sense nearby traffic lights and other vehicles
+- **Simple rules:** Complex traffic patterns emerge from simple individual behaviors
+- **Emergent behavior:** Orderly traffic flow arises without centralized coordination
+
+**MBA analogy:** Each vehicle is like an employee following clear policies (traffic lights) while avoiding conflicts with colleagues (collision avoidance).

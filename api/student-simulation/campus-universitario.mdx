@@ -1,0 +1,522 @@
+---
+title: 'CampusUniversitario'
+description: 'Environment class managing campus spaces and student population'
+icon: 'building-columns'
+---
+
+## Overview
+
+The `CampusUniversitario` class represents the complete campus environment with all spaces and students. It manages capacity constraints, tracks occupancy, coordinates student movement, and provides simulation state data.
+
+**Core Responsibilities:**
+- Maintains maximum capacity for each campus space
+- Counts and tracks student distribution
+- Coordinates synchronized movement of all students
+- Records occupancy history for analysis
+- Provides statistical reports
+
+## Class Definition
+
+```python
+class CampusUniversitario:
+    """
+    Represents the complete campus with all spaces and students.
+    
+    Responsibilities:
+    - Maintains registry of maximum capacities for each space
+    - Counts how many students are in each location
+    - Coordinates movement of all students
+    - Provides data for visualization
+    """
+```
+
+## Constructor
+
+<ParamField path="__init__" type="method">
+  Creates the campus environment and initializes the student population.
+  
+  ```python
+  def __init__(self, num_estudiantes=50)
+  ```
+  
+  <ParamField path="num_estudiantes" type="int" default="50">
+    Total number of student agents to create and manage
+  </ParamField>
+  
+  **Initialization Process:**
+  1. Sets capacity limits for all campus spaces
+  2. Defines visual zones for graphical rendering
+  3. Assigns zone colors for visualization
+  4. Creates student population with initial distribution
+  5. Initializes occupancy history tracking
+</ParamField>
+
+**Source:** `simulacion_movimiento_estudiantes_universidad.py:158-202`
+
+### Example
+
+```python
+# Create campus with default 50 students
+campus = CampusUniversitario()
+
+# Create campus with 80 students
+campus_large = CampusUniversitario(num_estudiantes=80)
+
+print(f"Created campus with {len(campus_large.estudiantes)} students")
+```
+
+## Attributes
+
+### Capacity Configuration
+
+<ResponseField name="capacidades" type="dict[UbicacionCampus, int]">
+  Maximum capacity for each campus location.
+  
+  **Default Values:**
+  - `AULA`: 30 students
+  - `BIBLIOTECA`: 25 students
+  - `CAFETERIA`: 20 students
+  
+  **Source:** `simulacion_movimiento_estudiantes_universidad.py:169-173`
+  
+  ```python
+  self.capacidades = {
+      UbicacionCampus.AULA: 30,
+      UbicacionCampus.BIBLIOTECA: 25,
+      UbicacionCampus.CAFETERIA: 20
+  }
+  ```
+</ResponseField>
+
+### Visual Configuration
+
+<ResponseField name="zonas" type="dict[UbicacionCampus, dict]">
+  Visual zone definitions for graphical rendering. Each zone contains coordinates and dimensions.
+  
+  **Structure:**
+  ```python
+  {
+      'x': float,      # Center X coordinate (0-100)
+      'y': float,      # Center Y coordinate (0-100)
+      'ancho': float,  # Width of zone
+      'alto': float    # Height of zone
+  }
+  ```
+  
+  **Default Layout:**
+  - `AULA`: Center (25, 75), Size 40×40
+  - `BIBLIOTECA`: Center (75, 75), Size 40×40
+  - `CAFETERIA`: Center (50, 25), Size 40×40
+  
+  **Source:** `simulacion_movimiento_estudiantes_universidad.py:177-181`
+</ResponseField>
+
+<ResponseField name="colores_zonas" type="dict[UbicacionCampus, str]">
+  Hex color codes for visualizing each campus zone.
+  
+  **Color Scheme:**
+  - `AULA`: `#FFE5E5` (light pink)
+  - `BIBLIOTECA`: `#E5F2FF` (light blue)
+  - `CAFETERIA`: `#E5FFE5` (light green)
+  
+  **Source:** `simulacion_movimiento_estudiantes_universidad.py:184-188`
+</ResponseField>
+
+### Student Population
+
+<ResponseField name="estudiantes" type="list[Estudiante]">
+  List containing all student agent objects in the simulation.
+  
+  **Initial Distribution:**
+  - 60% start in `AULA` (simulates post-class scenario)
+  - 20% start in `BIBLIOTECA`
+  - 20% start in `CAFETERIA`
+  
+  **Source:** `simulacion_movimiento_estudiantes_universidad.py:191`
+</ResponseField>
+
+### Analytics
+
+<ResponseField name="historial_ocupacion" type="dict[UbicacionCampus, list[int]]">
+  Time-series data tracking student count at each location per simulation step.
+  
+  **Structure:**
+  ```python
+  {
+      UbicacionCampus.AULA: [30, 28, 25, ...],
+      UbicacionCampus.BIBLIOTECA: [10, 12, 15, ...],
+      UbicacionCampus.CAFETERIA: [10, 10, 10, ...]
+  }
+  ```
+  
+  Each list index represents a simulation step. Populated by `actualizar_simulacion()`.
+  
+  **Source:** `simulacion_movimiento_estudiantes_universidad.py:198-202`
+</ResponseField>
+
+## Methods
+
+### contar_estudiantes_en
+
+<ParamField path="contar_estudiantes_en" type="method">
+  Counts how many students are currently in a specific location.
+  
+  ```python
+  def contar_estudiantes_en(self, ubicacion)
+  ```
+  
+  <ParamField path="ubicacion" type="UbicacionCampus" required>
+    The campus location to count students in
+  </ParamField>
+  
+  <ResponseField name="return" type="int">
+    Number of students currently at the specified location
+  </ResponseField>
+</ParamField>
+
+**Source:** `simulacion_movimiento_estudiantes_universidad.py:241-250`
+
+#### Implementation
+
+```python
+def contar_estudiantes_en(self, ubicacion):
+    return sum(1 for est in self.estudiantes if est.ubicacion_actual == ubicacion)
+```
+
+#### Example
+
+```python
+# Count students in each location
+aula_count = campus.contar_estudiantes_en(UbicacionCampus.AULA)
+biblioteca_count = campus.contar_estudiantes_en(UbicacionCampus.BIBLIOTECA)
+cafeteria_count = campus.contar_estudiantes_en(UbicacionCampus.CAFETERIA)
+
+print(f"Aula: {aula_count} students")
+print(f"Biblioteca: {biblioteca_count} students")
+print(f"Cafetería: {cafeteria_count} students")
+```
+
+### obtener_nivel_ocupacion
+
+<ParamField path="obtener_nivel_ocupacion" type="method">
+  Calculates the occupancy level of a space as a normalized value (0.0 to 1.0).
+  
+  ```python
+  def obtener_nivel_ocupacion(self, ubicacion)
+  ```
+  
+  <ParamField path="ubicacion" type="UbicacionCampus" required>
+    The campus location to check occupancy for
+  </ParamField>
+  
+  <ResponseField name="return" type="float">
+    Occupancy ratio:
+    - `0.0` = completely empty
+    - `0.5` = half full
+    - `1.0` = at maximum capacity
+  </ResponseField>
+</ParamField>
+
+**Source:** `simulacion_movimiento_estudiantes_universidad.py:252-268`
+
+#### Why Normalize to 0-1?
+
+- Enables fair comparison between spaces with different capacities
+- Easy conversion to percentage (multiply by 100)
+- Standard practice in simulations and ML
+
+#### Example
+
+```python
+# Check occupancy levels
+for ubicacion in UbicacionCampus:
+    nivel = campus.obtener_nivel_ocupacion(ubicacion)
+    porcentaje = nivel * 100
+    
+    if nivel < 0.5:
+        estado = "comfortable"
+    elif nivel < 0.8:
+        estado = "moderately full"
+    else:
+        estado = "crowded"
+    
+    print(f"{ubicacion.value}: {porcentaje:.1f}% - {estado}")
+```
+
+### obtener_zona_ubicacion
+
+<ParamField path="obtener_zona_ubicacion" type="method">
+  Returns the visual zone coordinates for a campus location.
+  
+  ```python
+  def obtener_zona_ubicacion(self, ubicacion)
+  ```
+  
+  <ParamField path="ubicacion" type="UbicacionCampus" required>
+    The campus location to get zone data for
+  </ParamField>
+  
+  <ResponseField name="return" type="dict">
+    Dictionary with keys: `x`, `y`, `ancho`, `alto`
+  </ResponseField>
+</ParamField>
+
+**Source:** `simulacion_movimiento_estudiantes_universidad.py:270-276`
+
+#### Example
+
+```python
+# Get zone for biblioteca
+zona = campus.obtener_zona_ubicacion(UbicacionCampus.BIBLIOTECA)
+
+print(f"Center: ({zona['x']}, {zona['y']})")
+print(f"Dimensions: {zona['ancho']} × {zona['alto']}")
+
+# Calculate bounding box
+left = zona['x'] - zona['ancho']/2
+right = zona['x'] + zona['ancho']/2
+bottom = zona['y'] - zona['alto']/2
+top = zona['y'] + zona['alto']/2
+```
+
+### actualizar_simulacion
+
+<ParamField path="actualizar_simulacion" type="method">
+  Executes one time step of the simulation. This is the core simulation loop method.
+  
+  ```python
+  def actualizar_simulacion(self)
+  ```
+  
+  **Three-Phase Process:**
+  
+  **Phase 1: Decision** - All students evaluate their next move
+  ```python
+  decisiones = []
+  for estudiante in self.estudiantes:
+      siguiente_ubicacion = estudiante.decidir_siguiente_ubicacion(self)
+      decisiones.append((estudiante, siguiente_ubicacion))
+  ```
+  
+  **Phase 2: Movement** - All movements execute simultaneously
+  ```python
+  for estudiante, nueva_ubicacion in decisiones:
+      estudiante.moverse_a(nueva_ubicacion, self)
+  ```
+  
+  **Phase 3: Recording** - Current state saved to history
+  ```python
+  for ubicacion in UbicacionCampus:
+      cantidad = self.contar_estudiantes_en(ubicacion)
+      self.historial_ocupacion[ubicacion].append(cantidad)
+  ```
+  
+  <ResponseField name="return" type="None">
+    Method updates simulation state in-place (no return value)
+  </ResponseField>
+</ParamField>
+
+**Source:** `simulacion_movimiento_estudiantes_universidad.py:278-305`
+
+#### Why This Three-Phase Approach?
+
+1. **Fair Decision-Making**: All students decide simultaneously based on the same state
+2. **Prevents Order Bias**: First student doesn't have advantage over last
+3. **Realistic Parallelism**: Simulates concurrent decision-making
+4. **Clean State Recording**: History captures post-movement state
+
+#### Example Usage
+
+```python
+# Run 10 simulation steps
+for step in range(10):
+    campus.actualizar_simulacion()
+    stats = campus.obtener_estadisticas()
+    print(f"Step {step + 1}:")
+    for ubicacion, datos in stats.items():
+        print(f"  {ubicacion}: {datos['cantidad']} ({datos['porcentaje']:.1f}%)")
+```
+
+### obtener_estadisticas
+
+<ParamField path="obtener_estadisticas" type="method">
+  Generates a comprehensive report of current occupancy across all locations.
+  
+  ```python
+  def obtener_estadisticas(self)
+  ```
+  
+  <ResponseField name="return" type="dict[str, dict]">
+    Dictionary mapping location names to their statistics.
+    
+    **Structure:**
+    ```python
+    {
+        "Aula": {
+            "cantidad": 28,
+            "capacidad": 30,
+            "porcentaje": 93.3
+        },
+        "Biblioteca": {
+            "cantidad": 15,
+            "capacidad": 25,
+            "porcentaje": 60.0
+        },
+        "Cafetería": {
+            "cantidad": 7,
+            "capacidad": 20,
+            "porcentaje": 35.0
+        }
+    }
+    ```
+  </ResponseField>
+</ParamField>
+
+**Source:** `simulacion_movimiento_estudiantes_universidad.py:307-326`
+
+#### Use Cases
+
+- Display during simulation runtime
+- Debugging and validation
+- Post-simulation analysis
+- Reporting and logging
+
+#### Example
+
+```python
+# Get and display current statistics
+stats = campus.obtener_estadisticas()
+
+print("Current Campus Occupancy:")
+print("-" * 50)
+
+for ubicacion, datos in stats.items():
+    bar_length = int(datos['porcentaje'] / 5)  # Scale to 20 chars max
+    bar = '█' * bar_length
+    
+    print(f"{ubicacion:12} {datos['cantidad']:2}/{datos['capacidad']:2} "
+          f"[{bar:<20}] {datos['porcentaje']:5.1f}%")
+```
+
+## Private Methods
+
+### _crear_estudiantes
+
+<ParamField path="_crear_estudiantes" type="method">
+  Internal method that creates and distributes the student population.
+  
+  ```python
+  def _crear_estudiantes(self, num_estudiantes)
+  ```
+  
+  **Distribution Strategy:**
+  - 60% in `AULA` (simulates post-class scenario)
+  - 20% in `BIBLIOTECA`
+  - 20% in `CAFETERIA`
+  
+  This creates an interesting initial state where the classroom is overcrowded, forcing dynamic redistribution.
+  
+  <ParamField path="num_estudiantes" type="int" required>
+    Total number of students to create
+  </ParamField>
+</ParamField>
+
+**Source:** `simulacion_movimiento_estudiantes_universidad.py:204-239`
+
+#### Implementation Details
+
+```python
+# Build distribution list
+ubicaciones_iniciales = (
+    [UbicacionCampus.AULA] * int(num_estudiantes * 0.6) +
+    [UbicacionCampus.BIBLIOTECA] * int(num_estudiantes * 0.2) +
+    [UbicacionCampus.CAFETERIA] * int(num_estudiantes * 0.2)
+)
+
+# Handle rounding (ensure exact count)
+while len(ubicaciones_iniciales) < num_estudiantes:
+    ubicaciones_iniciales.append(random.choice(list(UbicacionCampus)))
+
+# Shuffle to randomize creation order
+random.shuffle(ubicaciones_iniciales)
+
+# Create each student with random position in their zone
+for ubicacion in ubicaciones_iniciales:
+    zona = self.zonas[ubicacion]
+    x = zona['x'] + random.uniform(-zona['ancho']/2, zona['ancho']/2)
+    y = zona['y'] + random.uniform(-zona['alto']/2, zona['alto']/2)
+    estudiante = Estudiante(ubicacion, x, y)
+    self.estudiantes.append(estudiante)
+```
+
+## Complete Usage Example
+
+```python
+from enum import Enum
+import random
+
+# Create campus with 50 students
+campus = CampusUniversitario(num_estudiantes=50)
+
+# Display initial state
+print("Initial Distribution:")
+stats = campus.obtener_estadisticas()
+for ubicacion, datos in stats.items():
+    print(f"{ubicacion}: {datos['cantidad']}/{datos['capacidad']} "
+          f"({datos['porcentaje']:.1f}%)")
+
+# Run simulation for 20 steps
+print("\nRunning simulation...\n")
+for step in range(20):
+    campus.actualizar_simulacion()
+    
+    # Print every 5 steps
+    if (step + 1) % 5 == 0:
+        print(f"Step {step + 1}:")
+        stats = campus.obtener_estadisticas()
+        for ubicacion, datos in stats.items():
+            print(f"  {ubicacion}: {datos['cantidad']} students "
+                  f"({datos['porcentaje']:.1f}%)")
+
+# Analyze history
+print("\nOccupancy History:")
+for ubicacion in UbicacionCampus:
+    history = campus.historial_ocupacion[ubicacion]
+    avg = sum(history) / len(history)
+    max_count = max(history)
+    min_count = min(history)
+    
+    print(f"{ubicacion.value}:")
+    print(f"  Average: {avg:.1f} students")
+    print(f"  Range: {min_count}-{max_count} students")
+```
+
+## Design Rationale
+
+### Why Separate Capacities Dictionary?
+
+Allows easy configuration and experimentation:
+```python
+# Can be modified after creation
+campus.capacidades[UbicacionCampus.AULA] = 40  # Increase classroom capacity
+```
+
+### Why Track History?
+
+Enables:
+- Time-series analysis
+- Pattern recognition
+- Visualization of occupancy trends
+- Validation of equilibrium behavior
+
+### Why Three-Phase Update?
+
+Prevents race conditions and ensures fairness:
+- All students see same state when deciding
+- No advantage to being processed first/last
+- Mimics parallel decision-making in real life
+
+## Related Classes
+
+- [Estudiante](/api/student-simulation/estudiante) - Individual student agents
+- [VisualizadorSimulacion](/api/student-simulation/visualizador) - Visualization system

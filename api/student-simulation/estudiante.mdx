@@ -1,0 +1,278 @@
+---
+title: 'Estudiante'
+description: 'Agent class representing an individual student moving through campus'
+icon: 'user-graduate'
+---
+
+## Overview
+
+The `Estudiante` class represents an individual student agent that moves autonomously through different campus locations. Each student makes decisions based on space availability and has visual coordinates for rendering in the simulation.
+
+**Key Capabilities:**
+- Autonomous decision-making for location selection
+- Minimum residence time behavior (simulates realistic stay patterns)
+- Avoidance of overcrowded spaces
+- Unique ID tracking for individual student monitoring
+
+## Class Definition
+
+```python
+class Estudiante:
+    """
+    Represents an individual student that moves through campus.
+    
+    Each student has:
+    - A current location
+    - A visual position (x, y) for graphing
+    - Ability to decide where to move based on availability
+    """
+```
+
+## Constructor
+
+<ParamField path="__init__" type="method">
+  Initializes a new student agent.
+  
+  ```python
+  def __init__(self, ubicacion_inicial, posicion_x, posicion_y)
+  ```
+  
+  <ParamField path="ubicacion_inicial" type="UbicacionCampus" required>
+    Where the student starts (enum value: `AULA`, `BIBLIOTECA`, or `CAFETERIA`)
+  </ParamField>
+  
+  <ParamField path="posicion_x" type="float" required>
+    X coordinate in the graph (0-100 range)
+  </ParamField>
+  
+  <ParamField path="posicion_y" type="float" required>
+    Y coordinate in the graph (0-100 range)
+  </ParamField>
+</ParamField>
+
+### Example
+
+```python
+from enum import Enum
+
+class UbicacionCampus(Enum):
+    AULA = "Aula"
+    BIBLIOTECA = "Biblioteca"
+    CAFETERIA = "Cafetería"
+
+# Create a student starting in the classroom at position (25, 75)
+estudiante = Estudiante(
+    ubicacion_inicial=UbicacionCampus.AULA,
+    posicion_x=25,
+    posicion_y=75
+)
+```
+
+## Attributes
+
+<ResponseField name="id" type="int">
+  Unique identifier for this student. Auto-incremented using class-level counter `contador_id`.
+  
+  **Source:** Line 67 in `simulacion_movimiento_estudiantes_universidad.py:67`
+</ResponseField>
+
+<ResponseField name="ubicacion_actual" type="UbicacionCampus">
+  Current campus location where the student is positioned.
+  
+  **Source:** Line 68 in `simulacion_movimiento_estudiantes_universidad.py:68`
+</ResponseField>
+
+<ResponseField name="posicion_x" type="float">
+  Current X coordinate for visualization (0-100).
+  
+  **Source:** Line 69 in `simulacion_movimiento_estudiantes_universidad.py:69`
+</ResponseField>
+
+<ResponseField name="posicion_y" type="float">
+  Current Y coordinate for visualization (0-100).
+  
+  **Source:** Line 70 in `simulacion_movimiento_estudiantes_universidad.py:70`
+</ResponseField>
+
+<ResponseField name="tiempo_en_ubicacion" type="int">
+  Time steps the student has spent in their current location. Starts at 0 and increments each decision cycle.
+  
+  **Source:** Line 72 in `simulacion_movimiento_estudiantes_universidad.py:72`
+</ResponseField>
+
+<ResponseField name="tiempo_minimo_permanencia" type="int">
+  Minimum time steps before considering moving (randomized between 3-8). Simulates realistic stay patterns.
+  
+  **Source:** Line 74 in `simulacion_movimiento_estudiantes_universidad.py:74`
+</ResponseField>
+
+<ResponseField name="contador_id" type="int" static>
+  Static class variable that tracks the next ID to assign. Increments with each new student created.
+  
+  **Source:** Line 51 in `simulacion_movimiento_estudiantes_universidad.py:51`
+</ResponseField>
+
+## Methods
+
+### decidir_siguiente_ubicacion
+
+<ParamField path="decidir_siguiente_ubicacion" type="method">
+  The student analyzes which campus space is most suitable and decides where to move next.
+  
+  ```python
+  def decidir_siguiente_ubicacion(self, entorno)
+  ```
+  
+  **Decision Logic:**
+  1. If just arrived, stays for minimum time (`tiempo_minimo_permanencia`)
+  2. If current location < 70% full, has 70% probability to stay
+  3. Otherwise, finds location with lowest occupancy level
+  
+  <ParamField path="entorno" type="CampusUniversitario" required>
+    The campus environment object that provides occupancy data
+  </ParamField>
+  
+  <ResponseField name="return" type="UbicacionCampus">
+    The chosen location (either current or a new destination)
+  </ResponseField>
+</ParamField>
+
+**Source:** `simulacion_movimiento_estudiantes_universidad.py:76-115`
+
+#### Example
+
+```python
+# Student evaluates and decides next location
+siguiente_ubicacion = estudiante.decidir_siguiente_ubicacion(campus)
+
+if siguiente_ubicacion != estudiante.ubicacion_actual:
+    print(f"Student {estudiante.id} wants to move to {siguiente_ubicacion.value}")
+else:
+    print(f"Student {estudiante.id} staying at {estudiante.ubicacion_actual.value}")
+```
+
+#### Algorithm Details
+
+```python
+# Step 1: Check minimum residence time
+self.tiempo_en_ubicacion += 1
+if self.tiempo_en_ubicacion < self.tiempo_minimo_permanencia:
+    return self.ubicacion_actual
+
+# Step 2: Check comfort level (< 70% occupancy)
+nivel_ocupacion_actual = entorno.obtener_nivel_ocupacion(self.ubicacion_actual)
+if nivel_ocupacion_actual < 0.7 and random.random() < 0.7:
+    return self.ubicacion_actual
+
+# Step 3: Find least crowded location
+mejor_ubicacion = None
+menor_ocupacion = 1.0
+
+for ubicacion in UbicacionCampus:
+    ocupacion = entorno.obtener_nivel_ocupacion(ubicacion)
+    if ocupacion < menor_ocupacion:
+        menor_ocupacion = ocupacion
+        mejor_ubicacion = ubicacion
+
+return mejor_ubicacion
+```
+
+### moverse_a
+
+<ParamField path="moverse_a" type="method">
+  Moves the student to a new campus location, updating both logical and visual positions.
+  
+  ```python
+  def moverse_a(self, nueva_ubicacion, entorno)
+  ```
+  
+  **Operations Performed:**
+  1. Updates `ubicacion_actual` to the new location
+  2. Resets `tiempo_en_ubicacion` to 0
+  3. Randomizes new `tiempo_minimo_permanencia` (3-8 steps)
+  4. Calculates new visual position within the target zone
+  
+  <ParamField path="nueva_ubicacion" type="UbicacionCampus" required>
+    The destination location to move to
+  </ParamField>
+  
+  <ParamField path="entorno" type="CampusUniversitario" required>
+    The campus environment (needed to get zone coordinates)
+  </ParamField>
+  
+  <ResponseField name="return" type="None">
+    Method updates the student's state in-place (no return value)
+  </ResponseField>
+</ParamField>
+
+**Source:** `simulacion_movimiento_estudiantes_universidad.py:117-140`
+
+#### Example
+
+```python
+# Move student to library
+estudiante.moverse_a(UbicacionCampus.BIBLIOTECA, campus)
+
+print(f"Student now at: {estudiante.ubicacion_actual.value}")
+print(f"Visual position: ({estudiante.posicion_x:.1f}, {estudiante.posicion_y:.1f})")
+print(f"Will stay at least {estudiante.tiempo_minimo_permanencia} steps")
+```
+
+#### Position Calculation
+
+```python
+# Only moves if location is different
+if nueva_ubicacion != self.ubicacion_actual:
+    self.ubicacion_actual = nueva_ubicacion
+    self.tiempo_en_ubicacion = 0
+    self.tiempo_minimo_permanencia = random.randint(3, 8)
+    
+    # Get zone coordinates and add randomness
+    zona = entorno.obtener_zona_ubicacion(nueva_ubicacion)
+    self.posicion_x = zona['x'] + random.uniform(-zona['ancho']/2, zona['ancho']/2)
+    self.posicion_y = zona['y'] + random.uniform(-zona['alto']/2, zona['alto']/2)
+```
+
+## Design Rationale
+
+### Why Separate Location from Position?
+
+- **Location** (`ubicacion_actual`): Conceptual - which campus space (classroom, library, cafeteria)
+- **Position** (`posicion_x`, `posicion_y`): Visual - where to draw on the graph
+
+This separation allows multiple students in the same location to have different visual positions, preventing overlap.
+
+### Why Minimum Permanence Time?
+
+Simulates realistic human behavior:
+- People don't move every second
+- There's inertia in location choices
+- Random variation (3-8 steps) adds natural unpredictability
+
+### Why 70% Occupancy Threshold?
+
+Based on comfort psychology:
+- < 70% = comfortable, likely to stay
+- ≥ 70% = crowded, start considering alternatives
+- 70% probability to stay even when comfortable adds realism
+
+## Usage in Simulation Loop
+
+```python
+# Typical simulation step
+for estudiante in estudiantes:
+    # Phase 1: Decision
+    siguiente = estudiante.decidir_siguiente_ubicacion(campus)
+    decisiones.append((estudiante, siguiente))
+
+# Phase 2: Movement (after all decisions made)
+for estudiante, destino in decisiones:
+    estudiante.moverse_a(destino, campus)
+```
+
+This two-phase approach ensures fair decision-making - all students evaluate simultaneously before any moves occur.
+
+## Related Classes
+
+- [CampusUniversitario](/api/student-simulation/campus-universitario) - Environment containing students
+- [VisualizadorSimulacion](/api/student-simulation/visualizador) - Renders student positions

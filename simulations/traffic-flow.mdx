@@ -1,0 +1,602 @@
+---
+title: Traffic Flow Simulation
+description: Agent-based traffic intersection model with autonomous vehicles, synchronized traffic lights, and collision detection
+---
+
+This simulation models vehicle behavior at a four-way urban intersection. Each vehicle is an autonomous agent that obeys traffic signals, maintains safe distances, and navigates through the intersection following realistic driving rules.
+
+## Overview
+
+The traffic simulation creates a dynamic intersection environment where:
+
+- **4 traffic signals** control entry to the crossing zone
+- **Vehicles** approach from all four directions
+- **Collision detection** prevents vehicles from overlapping
+- **Traffic light synchronization** allows only perpendicular flows simultaneously
+- **Real-time metrics** track flow efficiency and congestion
+
+## Intersection Layout
+
+The intersection is centered on a 20×20 grid at coordinates (10, 10):
+
+```python
+ANCHO_CUADRICULA  = 20   # Grid width in cells
+ALTO_CUADRICULA   = 20   # Grid height in cells
+CENTRO_X = 10            # Intersection center X
+CENTRO_Y = 10            # Intersection center Y
+ANCHO_CALLE = 3          # Street width (includes both lanes)
+```
+
+*Source: `simulacion_trafico_ciudad.py:46-54`*
+
+<Steps>
+  <Step title="Horizontal Street">
+    Spans the entire grid width with two opposing lanes:
+    
+    - **Eastbound (→)**: Lower lane, vehicles move left to right
+    - **Westbound (←)**: Upper lane, vehicles move right to left
+    
+    Color: Blue vehicles (`#1565C0`)
+  </Step>
+  
+  <Step title="Vertical Street">
+    Spans the entire grid height with two opposing lanes:
+    
+    - **Northbound (↑)**: Right lane, vehicles move bottom to top
+    - **Southbound (↓)**: Left lane, vehicles move top to bottom
+    
+    Color: Red vehicles (`#C62828`)
+  </Step>
+  
+  <Step title="Crossing Zone">
+    3×3 cell intersection area where streets overlap:
+    
+    - **Position**: Center (10, 10) ± 1.5 cells
+    - **Visual Style**: Slightly lighter asphalt (`#3a3a3a`)
+    - **Border**: Visible edges to highlight the conflict zone
+  </Step>
+</Steps>
+
+## Traffic Light Synchronization
+
+The intersection has 4 semaphores operating on synchronized cycles:
+
+```python
+PASOS_VERDE    = 40   # Green light duration (frames)
+PASOS_AMARILLO = 10   # Yellow light duration (frames)
+PASOS_ROJO     = 50   # Red light duration (frames)
+```
+
+*Source: `simulacion_trafico_ciudad.py:57-59`*
+
+### Semaphore Cycle Logic
+
+Each traffic light cycles through three states:
+
+```python
+class EstadoSemaforo(Enum):
+    VERDE    = "VERDE"     # Vehicle can proceed
+    AMARILLO = "AMARILLO"  # Vehicle must stop (transition)
+    ROJO     = "ROJO"      # Vehicle completely stopped
+
+def _calcular_estado(self) -> EstadoSemaforo:
+    if self.contador_ciclo < PASOS_VERDE:
+        return EstadoSemaforo.VERDE
+    elif self.contador_ciclo < PASOS_VERDE + PASOS_AMARILLO:
+        return EstadoSemaforo.AMARILLO
+    else:
+        return EstadoSemaforo.ROJO
+```
+
+*Source: `simulacion_trafico_ciudad.py:84-166`*
+
+<Accordion title="Phase Synchronization">
+  **Horizontal Semaphores** (→ and ←):
+  - Start at phase 0: **GREEN** initially
+  - Control east-west traffic flow
+  - Located at x = CENTRO_X ± ANCHO_CALLE
+  
+  **Vertical Semaphores** (↑ and ↓):
+  - Start at phase 50: **RED** initially  
+  - Control north-south traffic flow
+  - Located at y = CENTRO_Y ± ANCHO_CALLE
+  
+  ```python
+  fase_inicial_rojo = PASOS_VERDE + PASOS_AMARILLO  # = 50
+  
+  # Horizontal semaphores start in green (fase_inicial = 0)
+  # Vertical semaphores start in red (fase_inicial = 50)
+  ```
+  
+  *Source: `simulacion_trafico_ciudad.py:471-510`*
+  
+  This ensures perpendicular flows **never** have green simultaneously, preventing collisions.
+</Accordion>
+
+### Semaphore Decision Logic
+
+Vehicles query semaphores to determine if they can proceed:
+
+```python
+def puede_pasar(self, sentido_auto: SentidoVia) -> bool:
+    if sentido_auto not in self.sentidos_controlados:
+        return True  # This semaphore doesn't control this flow
+    return self.estado_actual == EstadoSemaforo.VERDE
+```
+
+*Source: `simulacion_trafico_ciudad.py:179-194`*
+
+<Note>
+  **Yellow = Stop**
+  
+  In this simulation, yellow is treated as red (vehicles must stop). This prevents vehicles from rushing through the intersection during transitions.
+</Note>
+
+## Vehicle Behavior
+
+Each vehicle (Auto) is an autonomous agent with decision-making capabilities:
+
+```python
+class Auto:
+    def __init__(self, pos_x: float, pos_y: float, sentido: SentidoVia):
+        Auto.contador_global_autos += 1
+        self.id_auto = Auto.contador_global_autos
+        self.pos_x = pos_x
+        self.pos_y = pos_y
+        self.sentido = sentido
+        self.auto_velocidad = VELOCIDAD_AUTO  # 0.4 cells/frame
+        self.esta_detenido = False
+        self.fuera_de_pantalla = False
+```
+
+*Source: `simulacion_trafico_ciudad.py:232-261`*
+
+### Movement Parameters
+
+```python
+VELOCIDAD_AUTO = 0.4              # Cells advanced per frame
+DISTANCIA_SEGURIDAD = 1.8         # Minimum gap between vehicles
+DISTANCIA_DETECCION_SEMAFORO = 3.0  # Distance at which vehicle "sees" signal
+TOLERANCIA_LATERAL = 0.65         # Lateral margin for same-lane detection
+```
+
+*Source: `simulacion_trafico_ciudad.py:62-78`*
+
+### Vehicle Decision Hierarchy
+
+Each frame, vehicles follow this priority sequence:
+
+```python
+def actualizar(self, lista_semaforos: list, lista_autos: list):
+    # Step 1: Check for vehicle ahead
+    hay_auto_adelante = self.detectar_auto_al_frente(lista_autos)
+    
+    # Step 2: Check traffic signal ahead
+    semaforo_frontal = self.detectar_semaforo_al_frente(lista_semaforos)
+    semaforo_dice_parar = False
+    if semaforo_frontal is not None:
+        semaforo_dice_parar = not semaforo_frontal.puede_pasar(self.sentido)
+    
+    # Step 3: Decide to stop or proceed
+    if hay_auto_adelante or semaforo_dice_parar:
+        self.esta_detenido = True
+        return  # Don't move
+    
+    # Step 4: Move the vehicle
+    self.esta_detenido = False
+    delta_x, delta_y = self._calcular_delta()
+    self.pos_x += delta_x
+    self.pos_y += delta_y
+    
+    # Step 5: Check if outside grid
+    if self.pos_x < -2 or self.pos_x > ANCHO_CUADRICULA + 2:
+        self.fuera_de_pantalla = True
+```
+
+*Source: `simulacion_trafico_ciudad.py:389-426`*
+
+<Accordion title="Priority Explanation">
+  1. **Collision avoidance** takes highest priority - vehicles stop if another is ahead
+  2. **Traffic signal obedience** comes second - stop if signal is yellow/red
+  3. **Movement** only occurs if both checks pass
+  4. **Cleanup** marks vehicles that exit the grid for removal
+  
+  This mirrors real driving: you avoid crashes first, obey signals second, then proceed.
+</Accordion>
+
+## Collision Detection
+
+The collision detection algorithm prevents visual overlap between vehicles:
+
+```python
+def detectar_auto_al_frente(self, lista_autos: list) -> bool:
+    MITAD_LARGO_AUTO = 0.5  # Half the vehicle length
+    
+    for otro_auto in lista_autos:
+        if otro_auto.id_auto == self.id_auto:
+            continue  # Don't compare with self
+        
+        # Calculate distance along axis of travel and lateral offset
+        if self.sentido == SentidoVia.DERECHA:
+            diferencia_eje = (otro_auto.pos_x - MITAD_LARGO_AUTO) - (self.pos_x + MITAD_LARGO_AUTO)
+            diferencia_lateral = abs(otro_auto.pos_y - self.pos_y)
+        # ... (similar logic for other directions)
+        
+        # Vehicle is blocking if:
+        # 1. Its rear is ahead of this vehicle's front
+        # 2. Gap is less than safety distance
+        # 3. Both are in the same lane
+        if (-0.1 < diferencia_eje < DISTANCIA_SEGURIDAD and
+                diferencia_lateral < TOLERANCIA_LATERAL):
+            return True  # Vehicle blocking
+    
+    return False  # Path clear
+```
+
+*Source: `simulacion_trafico_ciudad.py:337-387`*
+
+<Warning>
+  **Safety Distance Calculation**
+  
+  The algorithm compares the **rear** of the front vehicle with the **front** of the following vehicle:
+  
+  ```
+  Front vehicle rear: otro_auto.pos_x - MITAD_LARGO_AUTO
+  This vehicle front:  self.pos_x + MITAD_LARGO_AUTO
+  
+  Gap = Front_rear - This_front
+  ```
+  
+  If gap < 1.8 cells, the following vehicle stops. This creates visible separation between vehicles.
+</Warning>
+
+## Semaphore Detection
+
+Vehicles detect relevant traffic signals within a range:
+
+```python
+def detectar_semaforo_al_frente(self, lista_semaforos: list):
+    semaforo_relevante = None
+    distancia_minima_encontrada = float('inf')
+    
+    for sem in lista_semaforos:
+        # Check if this semaphore controls this vehicle's direction
+        if self.sentido not in sem.sentidos_controlados:
+            continue
+        
+        # Calculate distance based on travel direction
+        if self.sentido == SentidoVia.DERECHA:
+            diferencia = sem.pos_x - self.pos_x
+        elif self.sentido == SentidoVia.IZQUIERDA:
+            diferencia = self.pos_x - sem.pos_x
+        # ... (similar for vertical directions)
+        
+        # Only consider semaphores AHEAD and within detection range
+        if 0 < diferencia < DISTANCIA_DETECCION_SEMAFORO:
+            if diferencia < distancia_minima_encontrada:
+                semaforo_relevante = sem
+    
+    return semaforo_relevante
+```
+
+*Source: `simulacion_trafico_ciudad.py:294-335`*
+
+<Note>
+  **Detection Range = 3.0 cells**
+  
+  Vehicles "see" traffic signals 3 cells ahead. This gives enough reaction time to stop smoothly without sudden braking at the intersection line.
+</Note>
+
+## Vehicle Generation
+
+The Ciudad (environment) generates new vehicles periodically:
+
+```python
+self.intervalo_generacion = 22  # Generate vehicle every 22 frames
+
+def actualizar(self):
+    self.pasos_desde_ultimo_auto_horizontal += 1
+    self.pasos_desde_ultimo_auto_vertical += 1
+    
+    # Generate horizontal vehicle
+    if self.pasos_desde_ultimo_auto_horizontal >= self.intervalo_generacion:
+        self._generar_auto_horizontal()
+        self.pasos_desde_ultimo_auto_horizontal = 0
+    
+    # Generate vertical vehicle (slightly offset timing)
+    if self.pasos_desde_ultimo_auto_vertical >= self.intervalo_generacion + 6:
+        self._generar_auto_vertical()
+        self.pasos_desde_ultimo_auto_vertical = 0
+```
+
+*Source: `simulacion_trafico_ciudad.py:635-647`*
+
+### Entry Zone Protection
+
+Vehicles only spawn if the entry zone is clear:
+
+```python
+def _zona_entrada_libre(self, pos_x: float, pos_y: float) -> bool:
+    margen_entrada = DISTANCIA_SEGURIDAD + 1.0  # Exclusion zone
+    for auto_existente in self.lista_autos:
+        distancia = ((auto_existente.pos_x - pos_x) ** 2 +
+                     (auto_existente.pos_y - pos_y) ** 2) ** 0.5
+        if distancia < margen_entrada:
+            return False  # Entry blocked
+    return True  # Clear to spawn
+```
+
+*Source: `simulacion_trafico_ciudad.py:532-549`*
+
+This prevents vehicles from spawning on top of existing vehicles at the grid edges.
+
+## Visualization Components
+
+The simulation renders three panels:
+
+```python
+class Visualizador:
+    def __init__(self, ciudad: Ciudad, total_pasos: int = 300):
+        self.figura = plt.figure(figsize=(16, 8), facecolor='#1a1a2e')
+        
+        # GridSpec layout: 2 rows, 2 columns
+        disposicion = self.figura.add_gridspec(
+            2, 2,
+            width_ratios=[2, 1],  # Left panel double width
+            hspace=0.35,
+            wspace=0.3
+        )
+        
+        # Left panel: intersection view (spans both rows)
+        self.eje_ciudad = self.figura.add_subplot(disposicion[:, 0])
+        
+        # Right top: traffic flow efficiency
+        self.eje_fluidez = self.figura.add_subplot(disposicion[0, 1])
+        
+        # Right bottom: vehicle density
+        self.eje_densidad = self.figura.add_subplot(disposicion[1, 1])
+```
+
+*Source: `simulacion_trafico_ciudad.py:675-711`*
+
+### Left Panel: Intersection View
+
+- **Streets**: Gray asphalt rectangles with white dashed lane dividers
+- **Crossing zone**: Highlighted 3×3 center area
+- **Vehicles**: Colored rounded rectangles (blue=horizontal, red=vertical)
+- **Stopped vehicles**: White border to highlight stopped state
+- **Traffic signals**: Black boxes with colored circle (green/yellow/red)
+- **Signal halos**: Glowing effect around active lights
+
+```python
+def _dibujar_autos(self):
+    for auto in self.ciudad.lista_autos:
+        # Determine dimensions based on direction
+        if auto.sentido in (SentidoVia.DERECHA, SentidoVia.IZQUIERDA):
+            ancho_rect = 1.0   # Horizontal: wide
+            alto_rect = 0.55
+        else:
+            ancho_rect = 0.55  # Vertical: tall
+            alto_rect = 1.0
+        
+        # Highlight stopped vehicles with white border
+        color_borde = '#FFFFFF' if auto.esta_detenido else 'none'
+        grosor_borde = 1.2 if auto.esta_detenido else 0
+```
+
+*Source: `simulacion_trafico_ciudad.py:853-889`*
+
+### Right Top: Flow Efficiency
+
+Tracks percentage of vehicles in motion:
+
+```python
+def _dibujar_grafico_fluidez(self):
+    porcentaje_movimiento = []
+    for activos, detenidos in zip(
+        self.ciudad.historial_autos_activos,
+        self.ciudad.historial_autos_detenidos
+    ):
+        if activos > 0:
+            porcentaje = ((activos - detenidos) / activos) * 100
+        else:
+            porcentaje = 0.0
+        porcentaje_movimiento.append(porcentaje)
+```
+
+*Source: `simulacion_trafico_ciudad.py:936-977`*
+
+- **0%**: All vehicles stopped (heavy congestion)
+- **50%**: Half moving, half stopped (threshold line shown)
+- **100%**: All vehicles flowing (ideal efficiency)
+
+### Right Bottom: Vehicle Density
+
+Shows total vehicles active vs. stopped:
+
+```python
+def _dibujar_grafico_densidad(self):
+    self.eje_densidad.plot(
+        pasos, self.ciudad.historial_autos_activos,
+        color='#66BB6A', linewidth=1.5, label='Autos Activos'
+    )
+    self.eje_densidad.plot(
+        pasos, self.ciudad.historial_autos_detenidos,
+        color='#EF5350', linewidth=1.5, label='Autos Detenidos'
+    )
+```
+
+*Source: `simulacion_trafico_ciudad.py:979-1025`*
+
+Includes live statistics box showing:
+- Active vehicles count
+- Stopped vehicles count  
+- Total completed (vehicles that exited grid)
+
+## Running the Simulation
+
+Execute with default parameters (300 frames):
+
+```python
+from simulacion_trafico_ciudad import ejecutar_simulacion
+
+ciudad, visualizador, animacion = ejecutar_simulacion()
+```
+
+Or specify custom duration:
+
+```python
+ciudad, visualizador, animacion = ejecutar_simulacion(total_pasos=500)
+```
+
+*Source: `simulacion_trafico_ciudad.py:1098-1163`*
+
+The simulation prints configuration summary:
+
+```
+=================================================================
+   SIMULACIÓN DE TRÁFICO — INTERSECCIÓN URBANA
+   Modelo Basado en Agentes | Python + matplotlib
+=================================================================
+
+  Configuración del entorno:
+    Cuadrícula      : 20 x 20 celdas
+    Centro cruce    : (10, 10)
+    Ancho de calle  : 3 celdas (2 carriles)
+    Semáforos       : 4 (uno por vía de entrada)
+
+  Ciclo de semáforos:
+    Verde           : 40 pasos
+    Amarillo        : 10 pasos
+    Rojo            : 50 pasos
+    Ciclo completo  : 100 pasos
+```
+
+## Adjustable Parameters
+
+<Accordion title="Vehicle Speed">
+  **Default**: 0.4 cells/frame
+  
+  **Location**: Line 62 in source code
+  
+  ```python
+  VELOCIDAD_AUTO = 0.4
+  ```
+  
+  Increase for faster traffic flow; decrease for more realistic urban speeds.
+</Accordion>
+
+<Accordion title="Safety Distance">
+  **Default**: 1.8 cells
+  
+  **Location**: Line 68 in source code
+  
+  ```python
+  DISTANCIA_SEGURIDAD = 1.8
+  ```
+  
+  Larger values create more spacing; smaller values allow tighter queues (but may cause visual overlap).
+</Accordion>
+
+<Accordion title="Signal Timing">
+  **Defaults**: Green=40, Yellow=10, Red=50
+  
+  **Location**: Lines 57-59 in source code
+  
+  ```python
+  PASOS_VERDE = 40
+  PASOS_AMARILLO = 10
+  PASOS_ROJO = 50
+  ```
+  
+  Longer green phases improve flow but may cause perpendicular queue buildup.
+</Accordion>
+
+<Accordion title="Spawn Interval">
+  **Default**: 22 frames between vehicles
+  
+  **Location**: Line 517 in source code
+  
+  ```python
+  self.intervalo_generacion = 22
+  ```
+  
+  Decrease for heavier traffic; increase for lighter flow.
+</Accordion>
+
+<Accordion title="Detection Range">
+  **Default**: 3.0 cells
+  
+  **Location**: Line 73 in source code
+  
+  ```python
+  DISTANCIA_DETECCION_SEMAFORO = 3.0
+  ```
+  
+  Vehicles "see" signals this far ahead. Larger values give more reaction time.
+</Accordion>
+
+## Expected Behavior Patterns
+
+When running the simulation, observe:
+
+1. **Initial Flow**: Horizontal vehicles (blue) move freely as their signals start green
+2. **Queue Formation**: Vertical vehicles (red) accumulate at red signals
+3. **Signal Transition**: After 40 frames, horizontal signals turn yellow then red
+4. **Flow Reversal**: Vertical signals turn green, releasing queued vehicles
+5. **Cyclic Pattern**: Alternating flow between horizontal and vertical every ~50 frames
+6. **Efficiency Waves**: Flow percentage oscillates with signal cycles
+7. **Steady State**: After ~100 frames, system reaches equilibrium with predictable patterns
+
+<Note>
+  **Emergent Traffic Waves**
+  
+  You may observe "phantom traffic jams" - spontaneous slowdowns that propagate backward through queues even after signals turn green. This emergent behavior matches real traffic patterns.
+</Note>
+
+## Key Implementation Details
+
+### Dark Mode Design
+
+All visualization uses dark theme optimized for readability:
+
+```python
+self.figura = plt.figure(figsize=(16, 8), facecolor='#1a1a2e')
+
+for eje in [self.eje_ciudad, self.eje_fluidez, self.eje_densidad]:
+    eje.set_facecolor('#16213e')
+    eje.tick_params(colors='#aaaaaa', labelsize=8)
+    for spine in eje.spines.values():
+        spine.set_edgecolor('#444466')
+```
+
+*Source: `simulacion_trafico_ciudad.py:688-717`*
+
+### Animation Frame Rate
+
+```python
+objeto_animacion = animacion_mod.FuncAnimation(
+    fig=self.figura,
+    func=self._actualizar_frame,
+    frames=self.total_pasos,
+    interval=120,  # 120ms between frames → ~8 fps
+    repeat=False,
+    blit=False
+)
+```
+
+*Source: `simulacion_trafico_ciudad.py:1081-1088`*
+
+Running at 8 FPS provides smooth animation while keeping computation manageable.
+
+### Reproducible Results
+
+Simulation uses fixed random seed:
+
+```python
+random.seed(42)
+```
+
+*Source: `simulacion_trafico_ciudad.py:37`*
+
+Remove this line for different random behavior each run.

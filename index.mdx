@@ -1,97 +1,279 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+mode: "custom"
 ---
 
-## Setting up
+<div className="relative overflow-hidden bg-gradient-to-br from-[#0a192f] via-[#112240] to-[#0a192f] dark:from-[#0a192f] dark:via-[#112240] dark:to-[#0a192f] py-20">
+  <div className="absolute inset-0 bg-[url('/images/grid.svg')] opacity-10"></div>
+  <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
+    <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
+          Agent-Based Modeling Simulations
+        </h1>
+        <p className="text-lg sm:text-xl text-gray-300 max-w-2xl mb-8">
+          Explore computational models that replicate real-world systems through autonomous agents. Study student movement patterns and urban traffic flow with interactive Python simulations.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a 
+            href="/quickstart" 
+            className="inline-flex items-center px-6 py-3 bg-[#4fc3f7] hover:bg-[#0288d1] text-white font-semibold rounded-lg transition-colors"
+          >
+            Get Started
+            <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </a>
+          <a 
+            href="/concepts/agent-based-modeling" 
+            className="inline-flex items-center px-6 py-3 border border-white/30 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition-colors"
+          >
+            Learn Concepts
+          </a>
+        </div>
+      </div>
+      <div className="hidden lg:block lg:col-span-5 mt-12 lg:mt-0">
+        <div className="relative">
+          <div className="absolute inset-0 bg-[#4fc3f7] blur-3xl opacity-20 rounded-full"></div>
+          <div className="relative bg-[#1a1d27] dark:bg-[#1a1d27] border border-[#27272a] dark:border-[#27272a] rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-3 h-3 rounded-full bg-red-500"></div>
+              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            </div>
+            <pre className="text-sm text-gray-300 overflow-x-auto"><code>{`# Run student simulation
+python run_sim.py \\
+  --num 50 \\
+  --pasos 100
 
-Get your documentation site up and running in minutes.
+# Run traffic simulation  
+python run_traffic.py \\
+  --ancho 20 \\
+  --alto 20 \\
+  --pasos 200`}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+    Quick start
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Get your first simulation running in three steps
+  </p>
 
-## Make it yours
+  <Steps>
+    <Step title="Install dependencies">
+      Create a virtual environment and install required packages:
+      
+      ```bash
+      python -m venv .venv
+      .venv/Scripts/Activate.ps1  # Windows
+      source .venv/bin/activate   # Linux/Mac
+      pip install -r requirements.txt
+      ```
+    </Step>
+    
+    <Step title="Choose a simulation">
+      This project includes two agent-based simulations:
+      
+      - **Student Movement**: Models how students navigate between classroom, library, and cafeteria based on space availability
+      - **Traffic Flow**: Simulates vehicles at a 4-way intersection with synchronized traffic lights
+    </Step>
+    
+    <Step title="Run your first simulation">
+      Execute the student movement simulation:
+      
+      ```bash
+      python run_sim.py --num 50 --pasos 100
+      ```
+      
+      You'll see an animated visualization showing agents making autonomous decisions in real-time.
+    </Step>
+  </Steps>
+</div>
 
-Design a docs site that looks great and empowers your users.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+    Explore simulations
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Dive into each simulation to understand agent behavior and emergent patterns
+  </p>
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
+  <CardGroup cols={2}>
     <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+      title="Student movement"
+      icon="users"
+      href="/simulations/student-movement"
+    >
+      Model student agents navigating campus locations with dynamic decision-making based on capacity constraints
+    </Card>
+    <Card
+      title="Traffic flow"
+      icon="traffic-light"
+      href="/simulations/traffic-flow"
+    >
+      Simulate vehicles with collision detection, traffic light obedience, and synchronized intersection control
+    </Card>
+    <Card
+      title="Agent concepts"
+      icon="brain"
+      href="/concepts/agent-based-modeling"
+    >
+      Learn the fundamentals of agent-based modeling and how autonomous agents create emergent behavior
+    </Card>
+    <Card
+      title="Architecture"
+      icon="diagram-project"
+      href="/concepts/simulation-architecture"
+    >
+      Understand the class structure, decision loops, and visualization engines powering these simulations
+    </Card>
+  </CardGroup>
+</div>
 
-## Create beautiful pages
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+    Key features
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    What makes these simulations powerful for learning and research
+  </p>
 
-Everything you need to create world-class documentation.
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="bg-gray-50 dark:bg-[#1a1d27] border border-gray-200 dark:border-[#27272a] rounded-lg p-6">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="flex-shrink-0 w-10 h-10 bg-[#4fc3f7]/10 dark:bg-[#4fc3f7]/10 rounded-lg flex items-center justify-center">
+          <svg className="w-6 h-6 text-[#4fc3f7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Autonomous agents</h3>
+      </div>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Each agent makes independent decisions based on local observations and rules, creating emergent system-level behavior
+      </p>
+    </div>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+    <div className="bg-gray-50 dark:bg-[#1a1d27] border border-gray-200 dark:border-[#27272a] rounded-lg p-6">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="flex-shrink-0 w-10 h-10 bg-[#4fc3f7]/10 dark:bg-[#4fc3f7]/10 rounded-lg flex items-center justify-center">
+          <svg className="w-6 h-6 text-[#4fc3f7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Real-time visualization</h3>
+      </div>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Watch agents move and interact through matplotlib animations, with live statistics and occupancy graphs
+      </p>
+    </div>
 
-## Need inspiration?
+    <div className="bg-gray-50 dark:bg-[#1a1d27] border border-gray-200 dark:border-[#27272a] rounded-lg p-6">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="flex-shrink-0 w-10 h-10 bg-[#4fc3f7]/10 dark:bg-[#4fc3f7]/10 rounded-lg flex items-center justify-center">
+          <svg className="w-6 h-6 text-[#4fc3f7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Configurable parameters</h3>
+      </div>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Adjust agent counts, simulation steps, speeds, and capacities through command-line arguments or code constants
+      </p>
+    </div>
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+    <div className="bg-gray-50 dark:bg-[#1a1d27] border border-gray-200 dark:border-[#27272a] rounded-lg p-6">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="flex-shrink-0 w-10 h-10 bg-[#4fc3f7]/10 dark:bg-[#4fc3f7]/10 rounded-lg flex items-center justify-center">
+          <svg className="w-6 h-6 text-[#4fc3f7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Statistical tracking</h3>
+      </div>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Historical occupancy data, flow metrics, and completion counts help analyze system performance over time
+      </p>
+    </div>
+  </div>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+    API Reference
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Explore the class interfaces and methods that power each simulation
+  </p>
+
+  <CardGroup cols={3}>
+    <Card
+      title="Estudiante"
+      icon="graduation-cap"
+      href="/api/student-simulation/estudiante"
+    >
+      Student agent class with decision logic and movement behavior
+    </Card>
+    <Card
+      title="CampusUniversitario"
+      icon="building-columns"
+      href="/api/student-simulation/campus-universitario"
+    >
+      Campus environment managing locations, capacities, and agent coordination
+    </Card>
+    <Card
+      title="Auto"
+      icon="car"
+      href="/api/traffic-simulation/auto"
+    >
+      Vehicle agent with collision detection and traffic light obedience
+    </Card>
+    <Card
+      title="Semaforo"
+      icon="traffic-light"
+      href="/api/traffic-simulation/semaforo"
+    >
+      Traffic light controller with synchronized state cycles
+    </Card>
+    <Card
+      title="Ciudad"
+      icon="city"
+      href="/api/traffic-simulation/ciudad"
+    >
+      City environment managing intersection, vehicles, and traffic flow
+    </Card>
+    <Card
+      title="Entry points"
+      icon="play"
+      href="/api/ejecutar-simulacion"
+    >
+      Main execution functions for launching simulations
+    </Card>
+  </CardGroup>
+</div>
+
+<div className="mt-20 mb-16 max-w-5xl mx-auto px-6">
+  <div className="bg-gradient-to-r from-[#4fc3f7]/10 to-[#0288d1]/10 dark:from-[#4fc3f7]/10 dark:to-[#0288d1]/10 border border-[#4fc3f7]/30 dark:border-[#4fc3f7]/30 rounded-2xl p-8 md:p-12">
+    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4">
+      Ready to explore agent-based modeling?
+    </h2>
+    <p className="text-base text-gray-600 dark:text-gray-400 mb-6 max-w-2xl">
+      Follow the quickstart guide to run your first simulation and see emergent behavior in action.
+    </p>
+    <a 
+      href="/quickstart" 
+      className="inline-flex items-center px-6 py-3 bg-[#4fc3f7] hover:bg-[#0288d1] text-white font-semibold rounded-lg transition-colors"
+    >
+      Start Building
+      <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+      </svg>
+    </a>
+  </div>
+</div>

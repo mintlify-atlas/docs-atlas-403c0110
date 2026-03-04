@@ -1,0 +1,156 @@
+---
+title: Introduction
+description: Understand agent-based modeling through two real-world simulations built in Python
+---
+
+## What is Agent-Based Modeling?
+
+Agent-Based Modeling (ABM) is a computational approach that simulates the behavior of autonomous agents in dynamic environments. Each agent follows its own set of rules, and the collective behavior of all agents produces emergent dynamics comparable to real-world systems.
+
+This project demonstrates ABM principles through two distinct simulations that model everyday scenarios:
+
+<CardGroup cols={2}>
+  <Card title="Student Movement" icon="graduation-cap">
+    Models how students navigate between classroom, library, and cafeteria based on space availability
+  </Card>
+  <Card title="Urban Traffic" icon="traffic-light">
+    Simulates vehicle flow through a 4-way intersection with synchronized traffic lights
+  </Card>
+</CardGroup>
+
+## Key Features
+
+Both simulations are designed with educational clarity and real-time visualization in mind:
+
+### Student Movement Simulation
+
+- **Autonomous decision-making**: Each student evaluates space availability and chooses destinations based on occupancy levels
+- **Realistic behavior**: Students remain in locations for random durations (3-8 steps) before considering movement
+- **Capacity constraints**: Three locations with different capacities (Classroom: 30, Library: 25, Cafeteria: 20)
+- **Dynamic visualization**: Real-time graphs showing spatial distribution and occupancy trends over time
+
+```python
+class Estudiante:
+    def decidir_siguiente_ubicacion(self, entorno):
+        # If location is comfortable (<70% full), 70% chance to stay
+        nivel_ocupacion_actual = entorno.obtener_nivel_ocupacion(self.ubicacion_actual)
+        if nivel_ocupacion_actual < 0.7 and random.random() < 0.7:
+            return self.ubicacion_actual
+        
+        # Otherwise, find location with most available space
+        mejor_ubicacion = None
+        menor_ocupacion = 1.0
+        for ubicacion in UbicacionCampus:
+            ocupacion = entorno.obtener_nivel_ocupacion(ubicacion)
+            if ocupacion < menor_ocupacion:
+                menor_ocupacion = ocupacion
+                mejor_ubicacion = ubicacion
+        return mejor_ubicacion
+```
+
+### Traffic Simulation
+
+- **Synchronized traffic lights**: 4 semaphores with coordinated GREEN → YELLOW → RED cycles
+- **Collision avoidance**: Vehicles maintain safe distances using proximity detection
+- **Traffic signal compliance**: Cars stop for yellow and red lights automatically
+- **Straight-line movement**: Vehicles travel only in their designated lane direction (no turns)
+- **Real-time metrics**: Live tracking of traffic flow, density, and congestion patterns
+
+```python
+class Auto:
+    def actualizar(self, lista_semaforos: list, lista_autos: list):
+        # Priority 1: Check for vehicle ahead
+        hay_auto_adelante = self.detectar_auto_al_frente(lista_autos)
+        
+        # Priority 2: Check traffic light status
+        semaforo_frontal = self.detectar_semaforo_al_frente(lista_semaforos)
+        semaforo_dice_parar = False
+        if semaforo_frontal is not None:
+            semaforo_dice_parar = not semaforo_frontal.puede_pasar(self.sentido)
+        
+        # Priority 3: Move only if path is clear
+        if hay_auto_adelante or semaforo_dice_parar:
+            self.esta_detenido = True
+            return
+        
+        # Apply movement
+        delta_x, delta_y = self._calcular_delta()
+        self.pos_x += delta_x
+        self.pos_y += delta_y
+```
+
+## Use Cases
+
+<AccordionGroup>
+  <Accordion title="Educational Research">
+    Perfect for computer science and engineering courses focusing on:
+    - Object-oriented programming principles
+    - Simulation design patterns
+    - Emergent behavior analysis
+    - Data visualization techniques
+  </Accordion>
+  
+  <Accordion title="Urban Planning Analysis">
+    Adapt the traffic simulation to:
+    - Test different traffic light timing strategies
+    - Analyze intersection capacity under various vehicle densities
+    - Model rush hour scenarios
+    - Evaluate impact of road configuration changes
+  </Accordion>
+  
+  <Accordion title="Campus Space Optimization">
+    Use the student movement model to:
+    - Identify overcrowding patterns in campus facilities
+    - Optimize classroom and study space allocation
+    - Predict peak usage times for different areas
+    - Plan new facility construction based on demand patterns
+  </Accordion>
+  
+  <Accordion title="Algorithm Development">
+    Extend the codebase to experiment with:
+    - Pathfinding algorithms (A*, Dijkstra)
+    - Machine learning for traffic prediction
+    - Multi-agent coordination strategies
+    - Optimization algorithms for resource allocation
+  </Accordion>
+</AccordionGroup>
+
+## Technical Architecture
+
+Both simulations follow a clean object-oriented design:
+
+<Steps>
+  <Step title="Agent Classes">
+    Individual entities with autonomous behavior (`Estudiante`, `Auto`)
+  </Step>
+  <Step title="Environment Classes">
+    Containers that coordinate all agents (`CampusUniversitario`, `Ciudad`)
+  </Step>
+  <Step title="Visualization Classes">
+    Real-time rendering using matplotlib animation (`VisualizadorSimulacion`, `Visualizador`)
+  </Step>
+  <Step title="Launcher Scripts">
+    Command-line interfaces with configurable parameters (`run_sim.py`, `run_traffic.py`)
+  </Step>
+</Steps>
+
+<Note>
+  All code, comments, and user-facing text are written 100% in Spanish as per the original academic project requirements.
+</Note>
+
+## What Makes This Project Unique?
+
+- **Extensively documented**: Every class and method includes detailed explanations of logic and design decisions
+- **No external frameworks**: Built using only `numpy` and `matplotlib` for maximum transparency
+- **Ready for extension**: Clean architecture makes it easy to add new features or agent types
+- **Visual feedback**: Animated graphics show simulation state evolution in real-time
+- **Flexible execution**: Run locally via VS Code or in Google Colab without modifications
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Set up your local environment and install dependencies
+  </Card>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Run your first simulation in under 2 minutes
+  </Card>
+</CardGroup>

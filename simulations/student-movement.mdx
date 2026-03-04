@@ -1,0 +1,356 @@
+---
+title: Student Movement Simulation
+description: Agent-based model of student movement across three university campus locations with capacity constraints
+---
+
+This simulation models how students move between different spaces on a university campus (classroom, library, cafeteria) based on availability and comfort levels. Each student is an autonomous agent that makes decisions about where to go based on occupancy levels.
+
+## Overview
+
+The student movement simulation demonstrates emergent behavior in spatial distribution. Students continuously evaluate their current location and decide whether to move based on:
+
+- Current occupancy levels (avoiding overcrowded spaces)
+- Minimum stay duration (realistic behavior patterns)
+- Available capacity in alternative locations
+- Personal comfort thresholds
+
+## Three Campus Locations
+
+<Steps>
+  <Step title="Aula (Classroom)">
+    **Capacity**: 30 students
+    
+    **Initial Distribution**: 60% of students start here
+    
+    **Visual Position**: Upper left quadrant (x: 25, y: 75)
+    
+    **Color Code**: Light pink (`#FFE5E5`) with red student markers
+  </Step>
+  
+  <Step title="Biblioteca (Library)">
+    **Capacity**: 25 students
+    
+    **Initial Distribution**: 20% of students start here
+    
+    **Visual Position**: Upper right quadrant (x: 75, y: 75)
+    
+    **Color Code**: Light blue (`#E5F2FF`) with blue student markers
+  </Step>
+  
+  <Step title="Cafetería (Cafeteria)">
+    **Capacity**: 20 students
+    
+    **Initial Distribution**: 20% of students start here
+    
+    **Visual Position**: Lower center (x: 50, y: 25)
+    
+    **Color Code**: Light green (`#E5FFE5`) with green student markers
+  </Step>
+</Steps>
+
+## Student Decision Logic
+
+Each student agent follows this decision hierarchy:
+
+```python
+def decidir_siguiente_ubicacion(self, entorno):
+    self.tiempo_en_ubicacion += 1
+    
+    # If not met minimum stay time, remain in current location
+    if self.tiempo_en_ubicacion < self.tiempo_minimo_permanencia:
+        return self.ubicacion_actual
+    
+    # Calculate current location occupancy (0 to 1)
+    nivel_ocupacion_actual = entorno.obtener_nivel_ocupacion(self.ubicacion_actual)
+    
+    # If comfortable (< 70% full), 70% chance to stay
+    if nivel_ocupacion_actual < 0.7 and random.random() < 0.7:
+        return self.ubicacion_actual
+    
+    # Find location with lowest occupancy
+    mejor_ubicacion = None
+    menor_ocupacion = 1.0
+    
+    for ubicacion in UbicacionCampus:
+        ocupacion = entorno.obtener_nivel_ocupacion(ubicacion)
+        if ocupacion < menor_ocupacion:
+            menor_ocupacion = ocupacion
+            mejor_ubicacion = ubicacion
+    
+    return mejor_ubicacion
+```
+
+*Source: `simulacion_movimiento_estudiantes_universidad.py:76-115`*
+
+<Accordion title="Decision Logic Breakdown">
+  **Step 1: Minimum Stay Duration**
+  
+  Students won't immediately leave a location. They stay for a minimum duration of 3-8 simulation steps, randomly assigned when they arrive.
+  
+  ```python
+  self.tiempo_minimo_permanencia = random.randint(3, 8)
+  ```
+  
+  **Step 2: Comfort Threshold**
+  
+  If the current location is less than 70% full, students have a 70% probability of staying, simulating contentment with uncrowded spaces.
+  
+  **Step 3: Optimal Location Search**
+  
+  When deciding to move, students evaluate all three locations and choose the one with the lowest occupancy level, creating a self-balancing distribution.
+</Accordion>
+
+## Capacity Constraints
+
+The simulation enforces maximum capacities for each location:
+
+```python
+self.capacidades = {
+    UbicacionCampus.AULA: 30,
+    UbicacionCampus.BIBLIOTECA: 25,
+    UbicacionCampus.CAFETERIA: 20
+}
+```
+
+*Source: `simulacion_movimiento_estudiantes_universidad.py:168-173`*
+
+Occupancy levels are normalized to 0-1 scale:
+
+```python
+def obtener_nivel_ocupacion(self, ubicacion):
+    cantidad_actual = self.contar_estudiantes_en(ubicacion)
+    capacidad_maxima = self.capacidades[ubicacion]
+    return cantidad_actual / capacidad_maxima
+```
+
+*Source: `simulacion_movimiento_estudiantes_universidad.py:252-268`*
+
+<Note>
+  **Why normalize occupancy?**
+  
+  Normalizing to 0.0-1.0 scale allows fair comparison between locations with different capacities. A value of 0.5 means "half full" regardless of whether the space holds 20 or 30 students.
+</Note>
+
+## Visualization Output
+
+The simulation generates a dual-panel animated visualization:
+
+### Left Panel: Campus Spatial View
+
+- **Real-time positions** of all students as colored dots
+- **Zone backgrounds** showing the three campus areas
+- **Student colors** matching their current location
+- **100x100 coordinate grid** for smooth movement animation
+
+### Right Panel: Occupancy Time Series
+
+- **Three colored lines** tracking student count in each location over time
+- **Capacity limit lines** shown as dashed horizontal lines
+- **Live statistics box** displaying current occupancy percentages
+- **Historical trend analysis** to identify equilibrium patterns
+
+```python
+class VisualizadorSimulacion:
+    def __init__(self, campus, pasos_simulacion=100):
+        self.campus = campus
+        self.pasos_simulacion = pasos_simulacion
+        self.paso_actual = 0
+        
+        # Two side-by-side subplots
+        self.fig, (self.ax_campus, self.ax_estadisticas) = plt.subplots(1, 2, figsize=(16, 7))
+        self.fig.suptitle('Simulación de Movimiento de Estudiantes en el Campus', 
+                          fontsize=16, fontweight='bold')
+```
+
+*Source: `simulacion_movimiento_estudiantes_universidad.py:344-362`*
+
+## Adjustable Parameters
+
+You can customize the simulation behavior by modifying these parameters:
+
+<Accordion title="Number of Students">
+  **Default**: 50 students
+  
+  **Range**: 10-100 recommended
+  
+  ```python
+  campus = CampusUniversitario(num_estudiantes=80)
+  ```
+  
+  More students create interesting crowding dynamics but may slow visualization.
+</Accordion>
+
+<Accordion title="Simulation Steps">
+  **Default**: 100 steps
+  
+  **Range**: 50-200 recommended
+  
+  ```python
+  visualizador = VisualizadorSimulacion(campus, pasos_simulacion=150)
+  ```
+  
+  More steps allow patterns to fully emerge but extend runtime.
+</Accordion>
+
+<Accordion title="Stay Duration">
+  **Default**: Random 3-8 steps
+  
+  **Location**: Line 74 in source code
+  
+  ```python
+  self.tiempo_minimo_permanencia = random.randint(3, 8)
+  ```
+  
+  Increase for more stable populations; decrease for faster movement.
+</Accordion>
+
+<Accordion title="Comfort Threshold">
+  **Default**: 70% occupancy, 70% stay probability
+  
+  **Location**: Line 100 in source code
+  
+  ```python
+  if nivel_ocupacion_actual < 0.7 and random.random() < 0.7:
+      return self.ubicacion_actual
+  ```
+  
+  Lower thresholds make students more sensitive to crowding.
+</Accordion>
+
+<Accordion title="Location Capacities">
+  **Defaults**: Aula (30), Biblioteca (25), Cafetería (20)
+  
+  **Location**: Lines 168-173 in source code
+  
+  Modify to simulate different campus configurations or class schedules.
+</Accordion>
+
+## Running the Simulation
+
+Execute the simulation with default parameters:
+
+```python
+from simulacion_movimiento_estudiantes_universidad import ejecutar_simulacion
+
+campus, visualizador, animacion = ejecutar_simulacion()
+```
+
+Or customize parameters:
+
+```python
+campus, visualizador, animacion = ejecutar_simulacion(
+    num_estudiantes=80,
+    pasos=150
+)
+```
+
+*Source: `simulacion_movimiento_estudiantes_universidad.py:538-588`*
+
+<Warning>
+  **Animation Frame Rate**
+  
+  The simulation runs at 500ms per frame (2 FPS) to make movement patterns observable. Running too fast makes it hard to see individual student decisions.
+  
+  ```python
+  interval=500,  # Milliseconds between frames
+  ```
+</Warning>
+
+## Key Implementation Classes
+
+### Estudiante (Student Agent)
+
+```python
+class Estudiante:
+    def __init__(self, ubicacion_inicial, posicion_x, posicion_y):
+        Estudiante.contador_id += 1
+        self.id = Estudiante.contador_id
+        self.ubicacion_actual = ubicacion_inicial
+        self.posicion_x = posicion_x
+        self.posicion_y = posicion_y
+        self.tiempo_en_ubicacion = 0
+        self.tiempo_minimo_permanencia = random.randint(3, 8)
+```
+
+*Source: `simulacion_movimiento_estudiantes_universidad.py:39-75`*
+
+**Attributes**:
+- `id`: Unique identifier for tracking individual students
+- `ubicacion_actual`: Current campus location (enum)
+- `posicion_x`, `posicion_y`: Visual coordinates on the 100x100 grid
+- `tiempo_en_ubicacion`: Steps spent at current location
+- `tiempo_minimo_permanencia`: Randomized minimum stay duration
+
+### CampusUniversitario (Environment)
+
+```python
+class CampusUniversitario:
+    def __init__(self, num_estudiantes=50):
+        self.capacidades = {
+            UbicacionCampus.AULA: 30,
+            UbicacionCampus.BIBLIOTECA: 25,
+            UbicacionCampus.CAFETERIA: 20
+        }
+        self.estudiantes = []
+        self._crear_estudiantes(num_estudiantes)
+        self.historial_ocupacion = {
+            UbicacionCampus.AULA: [],
+            UbicacionCampus.BIBLIOTECA: [],
+            UbicacionCampus.CAFETERIA: []
+        }
+```
+
+*Source: `simulacion_movimiento_estudiantes_universidad.py:147-202`*
+
+**Responsibilities**:
+- Maintain capacity limits for each location
+- Coordinate student movement decisions
+- Track occupancy history for visualization
+- Provide environmental information to student agents
+
+## Simulation Update Cycle
+
+Each simulation step follows this sequence:
+
+```python
+def actualizar_simulacion(self):
+    # Phase 1: All students decide their next movement
+    decisiones = []
+    for estudiante in self.estudiantes:
+        siguiente_ubicacion = estudiante.decidir_siguiente_ubicacion(self)
+        decisiones.append((estudiante, siguiente_ubicacion))
+    
+    # Phase 2: Execute all movements
+    for estudiante, nueva_ubicacion in decisiones:
+        estudiante.moverse_a(nueva_ubicacion, self)
+    
+    # Phase 3: Record current state in history
+    for ubicacion in UbicacionCampus:
+        cantidad = self.contar_estudiantes_en(ubicacion)
+        self.historial_ocupacion[ubicacion].append(cantidad)
+```
+
+*Source: `simulacion_movimiento_estudiantes_universidad.py:278-306`*
+
+<Note>
+  **Why separate decision and execution phases?**
+  
+  This ensures fairness - all students make decisions based on the *same* environmental state. If students moved immediately after deciding, early movers would influence later decisions unfairly.
+</Note>
+
+## Expected Behavior
+
+When you run the simulation, you'll observe:
+
+1. **Initial Imbalance**: Aula starts overcrowded (60% of students)
+2. **Exodus Phase**: Students leave Aula seeking less crowded spaces
+3. **Oscillation**: Populations fluctuate as students react to each other
+4. **Equilibrium**: System eventually stabilizes near capacity-proportional distribution
+5. **Continuous Adjustment**: Minor movements continue as individual stay durations expire
+
+The final distribution typically approaches:
+- **Aula**: ~40% (12/30 capacity)
+- **Biblioteca**: ~33% (8/25 capacity)  
+- **Cafetería**: ~30% (6/20 capacity)
+
+This emergent equilibrium reflects the capacity ratios (30:25:20) without being explicitly programmed.

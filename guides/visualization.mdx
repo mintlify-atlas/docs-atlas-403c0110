@@ -1,0 +1,485 @@
+---
+title: 'Visualization & Metrics'
+description: 'Understand the animated output, graphs, and statistical metrics'
+icon: 'chart-line'
+---
+
+## Overview
+
+Both simulations use matplotlib to create real-time animated visualizations with multiple panels showing spatial data and time-series analytics. This guide explains how to interpret each component.
+
+## Traffic Simulation Visualization
+
+The traffic simulation displays a comprehensive dashboard with three main areas:
+
+### Layout Structure
+
+```plaintext
+┌─────────────────────────────┬──────────────────┐
+│                             │  Fluidez (%)     │
+│   Intersection View         │                  │
+│   (Real-time spatial)       ├──────────────────┤
+│                             │  Densidad        │
+│                             │  (Vehicle Count) │
+└─────────────────────────────┴──────────────────┘
+```
+
+### Intersection View (Left Panel)
+
+Shows the bird's-eye view of the traffic intersection.
+
+<Steps>
+  <Step title="Street Infrastructure">
+    - **Gray asphalt** (`#2d2d2d`): Road surfaces
+    - **White dashed lines**: Lane dividers separating opposing traffic
+    - **Darker square**: Central intersection zone where paths cross
+    - **Gray borders**: Street edges (curbs)
+    
+    The intersection is always centered at grid coordinates `(CENTRO_X, CENTRO_Y)`.
+  </Step>
+
+  <Step title="Traffic Lights">
+    Four traffic lights positioned at the intersection entrance for each direction:
+    
+    | Color | Meaning | Hex Code |
+    |-------|---------|----------|
+    | 🟢 Green | Cars can proceed | `#00CC44` |
+    | 🟡 Yellow | Transition - must stop | `#FFD700` |
+    | 🔴 Red | Stop | `#FF2222` |
+    
+    Each light controls one traffic flow:
+    - **Left side**: Cars traveling right (→)
+    - **Right side**: Cars traveling left (←)
+    - **Bottom**: Cars traveling up (↑)
+    - **Top**: Cars traveling down (↓)
+    
+    <Note>
+      Only one street (horizontal OR vertical) has green lights at a time, preventing collisions.
+    </Note>
+  </Step>
+
+  <Step title="Vehicle Agents">
+    Cars are drawn as rounded rectangles with orientation:
+    
+    <CardGroup cols={2}>
+      <Card title="Horizontal Cars" icon="arrows-left-right">
+        **Blue** (`#1565C0`)  
+        Wide rectangles (1.0 x 0.55 cells)  
+        Travel east-west
+      </Card>
+      <Card title="Vertical Cars" icon="arrows-up-down">
+        **Red** (`#C62828`)  
+        Tall rectangles (0.55 x 1.0 cells)  
+        Travel north-south
+      </Card>
+    </CardGroup>
+    
+    **Visual Indicators:**
+    - **White border**: Car is stopped (obeying traffic light or avoiding collision)
+    - **No border**: Car is in motion
+    - **Slight transparency** (alpha=0.88): Allows seeing overlapping elements
+  </Step>
+
+  <Step title="Legend">
+    Upper-right corner provides a quick reference:
+    - Auto horizontal (→ ←)
+    - Auto vertical (↑ ↓)
+    - Auto detenido (white border)
+    - Traffic light states (green/yellow/red)
+  </Step>
+</Steps>
+
+### Fluidez Graph (Top Right)
+
+Measures **traffic flow efficiency** as a percentage of cars in motion.
+
+```python Calculation (lines 944-953)
+if activos > 0:
+    porcentaje = ((activos - detenidos) / activos) * 100
+else:
+    porcentaje = 0.0
+```
+
+<ParamField path="Y-axis" type="percentage" range="0-100%">
+  **Percentage of cars currently moving**
+  
+  - **100%**: Perfect flow, all cars moving freely
+  - **50-80%**: Normal traffic with some stops at lights
+  - **Below 50%** (yellow dashed line): Congestion threshold
+  - **0%**: Complete gridlock
+</ParamField>
+
+<ParamField path="X-axis" type="integer">
+  **Simulation step number** (frame count)
+</ParamField>
+
+**Interpretation:**
+
+<AccordionGroup>
+  <Accordion title="Oscillating pattern (healthy)">
+    Regular waves indicate normal traffic light cycles:
+    - **Peaks**: Green light phase, cars flowing
+    - **Valleys**: Red light phase, cars stopped
+    
+    Consistent amplitude shows stable traffic density.
+  </Accordion>
+
+  <Accordion title="Declining trend">
+    Gradual decrease in average fluidity suggests:
+    - Increasing vehicle density over time
+    - Insufficient green light duration (`PASOS_VERDE`)
+    - Cars spawning faster than they can exit
+  </Accordion>
+
+  <Accordion title="Flat line near 0%">
+    Gridlock condition:
+    - Too many cars for intersection capacity
+    - Reduce `intervalo_generacion` or increase grid size
+  </Accordion>
+</AccordionGroup>
+
+### Densidad Graph (Bottom Right)
+
+Tracks **vehicle counts** over time.
+
+<ParamField path="Autos Activos (Green line)">
+  Total number of cars currently on the grid.
+  
+  Includes both moving and stopped vehicles. Maximum depends on grid size and spawn rate.
+</ParamField>
+
+<ParamField path="Autos Detenidos (Red line)">
+  Number of cars currently stopped (at traffic lights or behind other cars).
+  
+  The area under this line is shaded red for emphasis.
+</ParamField>
+
+**Key Metrics Box:**
+
+Displayed in the top-left corner of this panel:
+
+```plaintext Example Statistics
+Activos: 12 autos
+Detenidos: 5 autos
+Creados: 87 autos
+Completados: 75 autos
+```
+
+<ResponseField name="Activos" type="integer">
+  Cars currently visible on screen
+</ResponseField>
+
+<ResponseField name="Detenidos" type="integer">
+  Subset of active cars that are stopped
+</ResponseField>
+
+<ResponseField name="Creados" type="integer">
+  Total cars spawned since simulation start (cumulative)
+</ResponseField>
+
+<ResponseField name="Completados" type="integer">
+  Cars that successfully crossed the intersection and exited the grid
+</ResponseField>
+
+**Analysis:**
+
+- **Gap between green and red lines**: Cars in motion (should match Fluidez %)
+- **Red line approaching green**: Heavy congestion
+- **Completados >> Activos**: Good throughput, intersection is efficient
+- **Creados ≈ Completados**: Steady-state reached
+
+## Student Simulation Visualization
+
+Two-panel layout showing spatial distribution and occupancy trends.
+
+### Campus View (Left Panel)
+
+Represents the physical campus with three distinct zones.
+
+<Steps>
+  <Step title="Campus Zones">
+    Three rectangular areas on a 100x100 coordinate system:
+    
+    | Location | Position | Size | Color |
+    |----------|----------|------|-------|
+    | Aula (Classroom) | (25, 75) | 40x40 | Light pink (`#FFE5E5`) |
+    | Biblioteca (Library) | (75, 75) | 40x40 | Light blue (`#E5F2FF`) |
+    | Cafetería (Cafeteria) | (50, 25) | 40x40 | Light green (`#E5FFE5`) |
+    
+    Each zone is drawn with:
+    - Semi-transparent background (alpha=0.3)
+    - Black border (2px)
+    - Centered label with white background
+  </Step>
+
+  <Step title="Student Agents">
+    Each student is a **colored dot** (scatter plot point):
+    
+    - **Red dot**: Student in Aula
+    - **Blue dot**: Student in Biblioteca  
+    - **Green dot**: Student in Cafetería
+    
+    **Properties:**
+    - Size: 50 pixels
+    - Alpha: 0.6 (semi-transparent)
+    - Black outline: 0.5px
+    
+    Dots are randomly positioned within their zone's boundaries, creating a realistic distribution effect.
+  </Step>
+
+  <Step title="Title Bar">
+    Shows current progress:
+    
+    ```plaintext
+    Vista del Campus - Paso 45/100
+    ```
+    
+    Updates in real-time as the simulation advances.
+  </Step>
+</Steps>
+
+### Ocupación Graph (Right Panel)
+
+Time-series plot tracking how many students occupy each location.
+
+<ParamField path="Y-axis" type="integer">
+  **Number of students** at a location.
+  
+  Range: 0 to `max(capacidades.values()) * 1.2`
+</ParamField>
+
+<ParamField path="X-axis" type="integer">
+  **Simulation step** (time)
+</ParamField>
+
+**Three Colored Lines:**
+
+<ResponseField name="Aula (Red)" type="line chart">
+  Population in classroom over time.
+  
+  Red dashed horizontal line shows capacity (default: 30).
+</ResponseField>
+
+<ResponseField name="Biblioteca (Blue)" type="line chart">
+  Population in library over time.
+  
+  Blue dashed line shows capacity (default: 25).
+</ResponseField>
+
+<ResponseField name="Cafetería (Green)" type="line chart">
+  Population in cafeteria over time.
+  
+  Green dashed line shows capacity (default: 20).
+</ResponseField>
+
+**Capacity Lines:**
+
+Dashed horizontal lines indicate maximum capacity for each location (defined in `self.capacidades`).
+
+**Statistics Box:**
+
+Wheat-colored box in upper-right shows live percentages:
+
+```plaintext Example
+Ocupación Actual:
+Aula: 18/30 (60.0%)
+Biblioteca: 16/25 (64.0%)
+Cafetería: 16/20 (80.0%)
+```
+
+### Behavioral Patterns to Observe
+
+<AccordionGroup>
+  <Accordion title="Initial redistribution (Steps 1-20)">
+    Students start concentrated (60% in Aula by default). Within first 20 steps:
+    - Sharp drop in Aula population
+    - Rise in Biblioteca and Cafetería
+    - Students flee overcrowded starting location
+  </Accordion>
+
+  <Accordion title="Equilibrium phase (Steps 20-80)">
+    Populations stabilize with oscillations:
+    - Students rotate between locations
+    - Occupancy percentages balance across spaces
+    - No location consistently exceeds 80% capacity
+    
+    This demonstrates the **emergent self-organization** of agent-based systems.
+  </Accordion>
+
+  <Accordion title="Late-stage stability (Steps 80-100)">
+    Minimal movement:
+    - Most students have found comfortable spots
+    - `tiempo_minimo_permanencia` keeps them in place
+    - Only occasional shifts when capacity thresholds are crossed
+  </Accordion>
+</AccordionGroup>
+
+## Saving Animations
+
+To export simulations as video files, modify the simulation code:
+
+<CodeGroup>
+  ```python Traffic Simulation
+  # Add at the end of ejecutar_simulacion function
+  # Before plt.show()
+  
+  from matplotlib.animation import FFMpegWriter
+  
+  writer = FFMpegWriter(fps=20, metadata=dict(artist='Me'), bitrate=1800)
+  ani.save('traffic_simulation.mp4', writer=writer)
+  ```
+
+  ```python Student Simulation
+  # In VisualizadorSimulacion.ejecutar() method
+  # After creating animation, before plt.show()
+  
+  from matplotlib.animation import PillowWriter
+  
+  writer = PillowWriter(fps=2)  # Match 500ms interval
+  anim.save('students_simulation.gif', writer=writer)
+  ```
+</CodeGroup>
+
+<Note>
+  Requires **ffmpeg** for MP4 or **Pillow** for GIF. Install with:
+  
+  ```bash
+  # For MP4
+  sudo apt-get install ffmpeg  # Linux
+  brew install ffmpeg          # macOS
+  
+  # For GIF
+  pip install Pillow
+  ```
+</Note>
+
+## Screenshot Capture
+
+To save a single frame:
+
+```python
+# Add in the update/actualizar function
+import matplotlib.pyplot as plt
+
+if self.paso_actual == 50:  # Capture at step 50
+    plt.savefig('simulation_frame_50.png', dpi=300, bbox_inches='tight')
+```
+
+## Interpreting Simulation Health
+
+### Traffic Simulation
+
+<ResponseField name="Healthy Traffic Flow" type="indicators">
+  ✅ Fluidez oscillates between 40-90%  
+  ✅ Completados count steadily increases  
+  ✅ Activos remains below 20-30 cars  
+  ✅ No cars stuck in entrance zones
+</ResponseField>
+
+<ResponseField name="Congestion Warning" type="indicators">
+  ⚠️ Fluidez consistently below 50%  
+  ⚠️ Detenidos line touching Activos line  
+  ⚠️ Creados >> Completados with growing gap  
+  ⚠️ Traffic lights barely visible due to car density
+</ResponseField>
+
+### Student Simulation
+
+<ResponseField name="Optimal Campus Dynamics" type="indicators">
+  ✅ All occupancy percentages below 80%  
+  ✅ Populations converge to similar levels  
+  ✅ Smooth transitions without wild spikes  
+  ✅ Students evenly distributed spatially within zones
+</ResponseField>
+
+<ResponseField name="Capacity Issues" type="indicators">
+  ⚠️ One location consistently at 100%  
+  ⚠️ Rapid oscillations in graph lines  
+  ⚠️ Students clustering in corners  
+  ⚠️ Empty locations while others overflow
+</ResponseField>
+
+## Dark Mode Design
+
+Both simulations are optimized for **dark backgrounds**:
+
+### Traffic Visualization
+
+```python Color Scheme (lines 688-715)
+self.figura = plt.figure(figsize=(16, 8), facecolor='#1a1a2e')  # Dark navy
+eje.set_facecolor('#16213e')        # Slightly lighter blue
+spine.set_edgecolor('#444466')      # Muted borders
+tick_params(colors='#aaaaaa')       # Light gray text
+```
+
+- **Figure background**: `#1a1a2e` (very dark blue-gray)
+- **Axis background**: `#16213e` (dark blue)
+- **Text/labels**: `#aaaacc` to `#ccccff` (light purple-gray)
+- **Grid lines**: `#444466` with low alpha
+
+### Student Visualization
+
+Uses matplotlib's `seaborn-v0_8-darkgrid` style (line 605):
+
+```python
+plt.style.use('seaborn-v0_8-darkgrid')
+```
+
+Provides dark background with subtle grid for better readability.
+
+<Tip>
+  When presenting simulations, use dark mode displays or projectors with good contrast ratio for best visual impact.
+</Tip>
+
+## Troubleshooting Visualization Issues
+
+<AccordionGroup>
+  <Accordion title="Animation window is blank">
+    Check matplotlib backend:
+    
+    ```python
+    import matplotlib
+    print(matplotlib.get_backend())  # Should be 'TkAgg' or 'Qt5Agg'
+    
+    # Force a specific backend
+    matplotlib.use('TkAgg')
+    ```
+  </Accordion>
+
+  <Accordion title="Graphs not updating">
+    Ensure `blit=False` in FuncAnimation:
+    
+    ```python
+    anim = animation.FuncAnimation(
+        fig, update_func, frames=100,
+        blit=False  # Critical for full redraw
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Colors look washed out">
+    Your display might be in light mode. The simulations are optimized for dark backgrounds.
+    
+    Alternatively, modify the color scheme in the source code to use lighter palettes.
+  </Accordion>
+
+  <Accordion title="Animation runs too fast to see details">
+    Increase the `interval` parameter:
+    
+    ```python
+    # From 50ms to 200ms (5 FPS)
+    interval=200
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Customize Parameters" icon="gears" href="/guides/customizing-parameters">
+    Adjust simulation behavior to create different scenarios
+  </Card>
+  <Card title="Run Simulations" icon="play" href="/guides/running-simulations">
+    Execute simulations with different configurations
+  </Card>
+</CardGroup>
