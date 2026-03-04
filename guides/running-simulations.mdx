@@ -61,8 +61,8 @@ The project includes two main simulations:
       python run_traffic.py
       ```
 
-      ```bash Custom Parameters
-      python run_traffic.py --ancho 25 --alto 25 --pasos 300
+      ```bash Custom Steps
+      python run_traffic.py --pasos 300
       ```
 
       ```bash Help
@@ -70,16 +70,8 @@ The project includes two main simulations:
       ```
     </CodeGroup>
 
-    <ParamField path="--ancho" type="integer" default="20">
-      Width of the city grid in cells
-    </ParamField>
-
-    <ParamField path="--alto" type="integer" default="20">
-      Height of the city grid in cells
-    </ParamField>
-
     <ParamField path="--pasos" type="integer" default="200">
-      Number of simulation steps (frames)
+      Number of simulation steps (frames) to execute. The grid size is fixed at 20x20 cells.
     </ParamField>
   </Step>
 </Steps>

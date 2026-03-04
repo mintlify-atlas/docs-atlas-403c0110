@@ -107,7 +107,7 @@ Experiment with different configurations to observe various patterns:
 
 <Steps>
   <Step title="Basic Execution">
-    Run the traffic simulation with default grid size (20x20) and 200 time steps:
+    Run the traffic simulation with default settings (300 time steps on a 20x20 grid):
     
     ```powershell
     python run_traffic.py
@@ -119,18 +119,14 @@ Experiment with different configurations to observe various patterns:
     - **Bottom right**: Active vs. stopped vehicle counts
   </Step>
 
-  <Step title="Customize Parameters">
-    Modify the grid dimensions and simulation length:
+  <Step title="Customize Simulation Length">
+    Adjust the number of simulation steps:
     
     ```powershell
-    python run_traffic.py --ancho 20 --alto 20 --pasos 200
+    python run_traffic.py --pasos 200
     ```
     
-    <ParamField path="--ancho" type="integer" default="20">
-      Grid width in cells (affects visualization scale, not intersection logic)
-    </ParamField>
-    
-    <ParamField path="--alto" type="integer" default="20">
+    <ParamField path="--pasos" type="integer" default="200">
       Grid height in cells (affects visualization scale, not intersection logic)
     </ParamField>
     
@@ -198,13 +194,13 @@ Experiment with different configurations to observe various patterns:
   python run_traffic.py --pasos 100
   ```
   
-  ```powershell Extended Analysis
-  python run_traffic.py --ancho 25 --alto 25 --pasos 400
+  ```powershell Default Length
+  python run_traffic.py
   ```
 </CodeGroup>
 
 <Note>
-  The `--ancho` and `--alto` parameters primarily affect the visual scale. The intersection logic is centered in the grid and operates independently of grid size.
+  The grid size is fixed at 20x20 cells (defined by constants in the source code). To change the grid dimensions, modify `ANCHO_CUADRICULA` and `ALTO_CUADRICULA` constants in `simulacion_trafico_ciudad.py`.
 </Note>
 
 ## Visual Indicators

@@ -42,30 +42,6 @@ These parameters can be passed when running simulations from the terminal.
 
 ### Traffic Simulation
 
-<ParamField path="--ancho" type="integer" default="20">
-  **Grid width**
-  
-  Width of the city grid in cells.
-  
-  ```bash
-  python run_traffic.py --ancho 30
-  ```
-  
-  <Note>
-    Must be large enough to accommodate the intersection (minimum 10).
-  </Note>
-</ParamField>
-
-<ParamField path="--alto" type="integer" default="20">
-  **Grid height**
-  
-  Height of the city grid in cells.
-  
-  ```bash
-  python run_traffic.py --alto 30
-  ```
-</ParamField>
-
 <ParamField path="--pasos" type="integer" default="200">
   **Simulation steps**
   
@@ -77,6 +53,10 @@ These parameters can be passed when running simulations from the terminal.
   
   Longer simulations allow traffic patterns to stabilize and reach equilibrium.
 </ParamField>
+
+<Warning>
+  The grid dimensions (`--ancho` and `--alto` flags) accepted by `run_traffic.py` are not actually used by the simulation. The grid size is fixed at 20x20 cells by constants in the source code. To change grid dimensions, you must modify `ANCHO_CUADRICULA` and `ALTO_CUADRICULA` constants directly in `simulacion_trafico_ciudad.py` (lines 46-47).
+</Warning>
 
 ## Traffic Simulation Constants
 
@@ -404,7 +384,7 @@ Control animation speed by modifying the `interval` parameter:
     ```bash
     # Run from command line with extended duration
     python run_sim.py --num 100 --pasos 500
-    python run_traffic.py --ancho 30 --alto 30 --pasos 1000
+    python run_traffic.py --pasos 1000
     ```
   </Accordion>
 </AccordionGroup>
